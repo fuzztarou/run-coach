@@ -84,6 +84,11 @@ uv add --dev <package>
 - ブランチ名: `feat/<機能名>`, `fix/<修正内容>`, `docs/<ドキュメント>`
 - PRマージ後にブランチ削除
 
+### 実装計画
+- planモードで実装計画を立てたら、ルートフォルダに `PLAN_<機能名>.md` を作成する
+- 例: `PLAN_phase1_mvp.md`, `PLAN_guardrails.md`
+- 実装完了後も削除せず残す（振り返り用）
+
 ### 規約
 - 命名: スネークケース
 - 各処理は state を受け取り state を返す関数にする（LangGraph移行を見据える）

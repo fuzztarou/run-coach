@@ -16,6 +16,9 @@ build/
 # 1Password
 # .env.tpl is safe to commit (contains only references, not secrets)
 
+# Plan files (implementation plans by Claude Code)
+PLAN_*.md
+
 # IDE
 .vscode/
 .idea/
