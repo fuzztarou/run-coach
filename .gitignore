@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+
+# Environment
+.env
+.venv/
+
+# Data
+*.db
+*.sqlite
+
+# 1Password
+# .env.tpl is safe to commit (contains only references, not secrets)
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+
+# Garmin tokens
+.garminconnect/
