@@ -26,5 +26,8 @@ PLAN_*.md
 # OS
 .DS_Store
 
+# User config (contains personal data)
+config/profile.yaml
+
 # Garmin tokens
 .garminconnect/
