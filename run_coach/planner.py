@@ -84,7 +84,9 @@ def _build_prompt(state: AgentState) -> str:
 
     if signals.race_predictions:
         parts.append("\n## レース予測タイム（Garmin推定）")
-        parts.append("※VO2Maxベースの理論値であり、実際のレースタイムより速く出る傾向がある。過信せず参考値として扱うこと。")
+        parts.append(
+            "※VO2Maxベースの理論値であり、実際のレースタイムより速く出る傾向がある。過信せず参考値として扱うこと。"
+        )
         for dist, time_val in signals.race_predictions.items():
             parts.append(f"- {dist}: {time_val}")
 
@@ -100,8 +102,12 @@ def _build_prompt(state: AgentState) -> str:
 
     next_monday = date.today() + timedelta(days=(7 - date.today().weekday()) % 7 or 7)
     parts.append(f"\n来週の月曜日: {next_monday}")
-    parts.append(f"週間走行回数の目安: {profile.runs_per_week.min}〜{profile.runs_per_week.max}回")
-    parts.append("\n上記を踏まえて、来週のトレーニング計画をJSON形式で作成してください。")
+    parts.append(
+        f"週間走行回数の目安: {profile.runs_per_week.min}〜{profile.runs_per_week.max}回"
+    )
+    parts.append(
+        "\n上記を踏まえて、来週のトレーニング計画をJSON形式で作成してください。"
+    )
 
     return "\n".join(parts)
 

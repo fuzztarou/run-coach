@@ -1,5 +1,3 @@
-from datetime import date
-
 from run_coach.garmin import summarize_activity
 
 
@@ -29,7 +27,9 @@ def test_summarize_running_activity():
 
 def test_summarize_non_target_returns_none():
     """対象外のアクティビティはNoneを返すこと"""
-    assert summarize_activity(_make_activity(activityType={"typeKey": "cycling"})) is None
+    assert (
+        summarize_activity(_make_activity(activityType={"typeKey": "cycling"})) is None
+    )
 
 
 def test_summarize_zero_distance():
