@@ -27,7 +27,9 @@ def plan_to_markdown(plan: Plan) -> str:
     ]
 
     for workout in plan.workouts:
-        intensity = INTENSITY_LABEL.get(workout.intensity or "", workout.intensity or "-")
+        intensity = INTENSITY_LABEL.get(
+            workout.intensity or "", workout.intensity or "-"
+        )
         hr = str(workout.max_hr) if workout.max_hr else "-"
         purpose = workout.purpose or "-"
         duration = workout.duration_min or 0
