@@ -44,7 +44,7 @@ run-coach/
 ├── docs/                  # Phase毎の詳細設計
 ├── DESIGN.md              # 全体設計書
 ├── pyproject.toml         # uv プロジェクト設定
-├── .env.tpl               # 1Password参照テンプレート
+├── .env.example           # 必要な環境変数の一覧
 ├── .github/
 │   └── workflows/ci.yml   # GitHub Actions (lint + test)
 └── .claude/
@@ -56,8 +56,8 @@ run-coach/
 # 初期セットアップ
 uv sync
 
-# 実行（1Password経由）
-op run --env-file=.env.tpl -- uv run python -m run_coach
+# 実行（環境変数は.zprofileで定義済み）
+uv run python -m run_coach
 
 # テスト
 uv run pytest tests/
@@ -75,7 +75,7 @@ uv add --dev <package>
 
 ### 必須
 - **mainブランチに直接コミットしない。必ずブランチを切ってPRで統合する**
-- シークレットをハードコードしない（1Password CLI / Secret Manager）
+- シークレットをハードコードしない（`.zprofile`の環境変数 / Secret Manager）
 - LLMに送るデータは最小限（位置情報・個人情報を除外）
 - Pydanticでstateスキーマを定義（型安全）
 - LLM出力は構造化JSON（文章ではなくPlan型に準拠）
@@ -84,13 +84,19 @@ uv add --dev <package>
 - ブランチ名: `feat/<機能名>`, `fix/<修正内容>`, `docs/<ドキュメント>`
 - PRマージ後にブランチ削除
 
+### 実装計画
+- planモードで実装計画を立てたら、ルートフォルダに `PLAN_<機能名>.md` を作成する
+- 例: `PLAN_phase1_mvp.md`, `PLAN_guardrails.md`
+- 実装完了後も削除せず残す（振り返り用）
+
 ### 規約
 - 命名: スネークケース
+- マジックナンバーを使わない。モジュール先頭で定数として定義する
 - 各処理は state を受け取り state を返す関数にする（LangGraph移行を見据える）
 - テストは各Phaseで書く
 
 ### セキュリティ
-- Garminパスワードは.envに残さない（トークン認証を利用）
+- Garminパスワードはコードに残さない（トークン認証を利用）
 - SQLiteファイルのパーミッション: 600
 - LINE Webhookは署名検証必須
 - Cloud RunはIAM認証

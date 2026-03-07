@@ -1,0 +1,7 @@
+birthday: "1980-10-15"
+goal: "サブ4"
+runs_per_week:
+  min: 3
+  max: 4
+injury_history:
+  - "2025年 左膝IT band"
