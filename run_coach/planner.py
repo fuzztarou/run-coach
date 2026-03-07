@@ -32,7 +32,7 @@ SYSTEM_PROMPT = """\
   "workouts": [
     {
       "date": "YYYY-MM-DD",
-      "workout_type": "easy_run | tempo | intervals | long_run | rest | cross_training",
+      "workout_type": "easy_run | tempo | intervals | long_run | cross_training",
       "purpose": "このワークアウトの目的（例: 疲労抜き、心肺強化、有酸素ベース構築、閾値向上）",
       "duration_min": 整数,
       "intensity": "low | moderate | high",
