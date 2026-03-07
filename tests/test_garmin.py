@@ -1,5 +1,3 @@
-from datetime import date
-
 from run_coach.garmin import summarize_activity
 
 

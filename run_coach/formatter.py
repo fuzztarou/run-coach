@@ -16,7 +16,7 @@ def plan_to_markdown(plan: Plan) -> str:
     lines = [
         f"# トレーニング計画 (Week of {plan.week_start})",
         "",
-        f"## ワークアウト評価",
+        "## ワークアウト評価",
         "",
         plan.workout_evaluation,
         "",
