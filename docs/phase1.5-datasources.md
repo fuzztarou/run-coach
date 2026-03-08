@@ -46,6 +46,7 @@ flowchart TB
 - `config/client_secret.json` にクライアントIDを配置（gitignore対象）
 - 初回実行時にブラウザ認証 → `config/token.json` が生成される
 - Events.list APIで7日間のイベントを取得
+- イベントの時刻情報を含む（時刻付き: `"09:00-10:00 会議"`, 終日: `"終日: 出張"`）
 
 ### Open-Meteo API
 - APIキー不要・無料・無制限
@@ -69,7 +70,7 @@ class Location(BaseModel):
 class CalendarSlot(BaseModel):
     date: date
     available: bool
-    events: list[str] = []
+    events: list[str] = []  # 時刻付き: "09:00-10:00 会議", 終日: "終日: 出張"
 
 class DailyWeather(BaseModel):
     date: date
