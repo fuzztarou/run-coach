@@ -1,4 +1,4 @@
-# Phase 3: RAG導入
+# Phase 7: RAG導入
 
 ベクトル検索で自由文データ（振り返りメモ・指導書等）を活用する。
 
@@ -107,7 +107,7 @@ class AgentState(BaseModel):
     user_profile: UserProfile
     signals: Signals
     constraints: Constraints
-    memory: dict | None = None      # ← Phase 3で追加（RAG検索結果）
+    memory: dict | None = None      # ← Phase 7で追加（RAG検索結果）
     plan: Plan | None = None
     logs: list[dict] | None = None
 ```
