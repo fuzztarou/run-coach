@@ -5,7 +5,7 @@ import os
 from datetime import date, timedelta
 from pathlib import Path
 
-from garminconnect import Garmin, GarminConnectAuthenticationError
+from garminconnect import Garmin, GarminConnectAuthenticationError  # type: ignore[import-untyped]
 
 from run_coach.state import AgentState, RaceEvent, Signals, WorkoutSummary
 
@@ -113,7 +113,7 @@ def fetch_workouts(state: AgentState) -> AgentState:
         raw_predictions = client.get_race_predictions()
         if raw_predictions:
             race_predictions = {k: str(v) for k, v in raw_predictions.items() if v}
-    except Exception:
+    except (KeyError, TypeError, AttributeError):
         pass
 
     state.signals = Signals(
@@ -147,7 +147,7 @@ def _fetch_race_detail(client: Garmin, event_id: int) -> RaceEvent | None:
             goal_time_seconds=goal_time,
             location=location,
         )
-    except Exception:
+    except (KeyError, TypeError, ValueError, OSError):
         logger.warning("レース詳細の取得に失敗: event_id=%s", event_id, exc_info=True)
         return None
 
@@ -156,7 +156,7 @@ def fetch_races(state: AgentState) -> AgentState:
     """Fetch upcoming race events from Garmin Calendar and populate state.constraints.races."""
     try:
         client = _login()
-    except Exception:
+    except (GarminConnectAuthenticationError, OSError):
         logger.warning(
             "Garminログインに失敗したため大会情報をスキップします", exc_info=True
         )
@@ -177,7 +177,7 @@ def fetch_races(state: AgentState) -> AgentState:
             raw_calendar = client.garth.connectapi(
                 f"/calendar-service/year/{target_year}/month/{target_month - 1}",
             )
-        except Exception as e:
+        except (KeyError, TypeError, OSError) as e:
             logger.warning(
                 "カレンダー取得失敗: %d/%d (%s)", target_year, target_month, e
             )
