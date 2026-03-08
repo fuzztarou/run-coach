@@ -97,7 +97,9 @@ def fetch_workouts(state: AgentState) -> AgentState:
     """Fetch recent workouts from Garmin Connect and populate state.signals."""
     client = _login()
 
-    activities = client.get_activities(start=0, limit=ACTIVITY_FETCH_LIMIT)
+    # get_activities() の戻り値は dict | list なので型を絞り込む
+    raw_activities = client.get_activities(start=0, limit=ACTIVITY_FETCH_LIMIT)
+    activities: list[dict] = raw_activities if isinstance(raw_activities, list) else []
 
     cutoff = date.today() - timedelta(days=LOOKBACK_DAYS)
     workouts: list[WorkoutSummary] = []
@@ -124,7 +126,11 @@ def fetch_workouts(state: AgentState) -> AgentState:
 def _fetch_race_detail(client: Garmin, event_id: int) -> RaceEvent | None:
     """Fetch race event detail from Garmin Calendar API."""
     try:
-        event_detail = client.garth.connectapi(f"/calendar-service/event/{event_id}")
+        # connectapi() の戻り値は dict | list | None なので型を絞り込む
+        raw = client.garth.connectapi(f"/calendar-service/event/{event_id}")
+        if not isinstance(raw, dict):
+            return None
+        event_detail: dict = raw
         event_name = event_detail.get("eventName", event_detail.get("title", "Unknown"))
         event_date_str = event_detail.get("date", "")
         if not event_date_str:
@@ -168,7 +174,7 @@ def fetch_races(state: AgentState) -> AgentState:
 
         try:
             # Garmin Calendar APIの月インデックス: 0始まり
-            monthly_calendar = client.garth.connectapi(
+            raw_calendar = client.garth.connectapi(
                 f"/calendar-service/year/{target_year}/month/{target_month - 1}",
             )
         except Exception as e:
@@ -177,6 +183,10 @@ def fetch_races(state: AgentState) -> AgentState:
             )
             continue
 
+        # connectapi() の戻り値は dict | list | None なので型を絞り込む
+        if not isinstance(raw_calendar, dict):
+            continue
+        monthly_calendar: dict = raw_calendar
         for item in monthly_calendar.get("calendarItems", []):
             if item.get("itemType") != "event" or not item.get("isRace"):
                 continue
