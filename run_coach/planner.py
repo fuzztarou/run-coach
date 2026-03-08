@@ -59,7 +59,7 @@ def call_llm(prompt: str, system: str = "") -> str:
         if system:
             messages.append({"role": "system", "content": system})
         messages.append({"role": "user", "content": prompt})
-        response = client.chat.completions.create(
+        response = client.chat.completions.create(  # type: ignore[call-overload]
             model=os.environ.get("LLM_MODEL", DEFAULT_LLM_MODEL),
             messages=messages,
             temperature=0.7,
