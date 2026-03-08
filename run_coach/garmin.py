@@ -5,7 +5,7 @@ import os
 from datetime import date, timedelta
 from pathlib import Path
 
-from garminconnect import Garmin
+from garminconnect import Garmin, GarminConnectAuthenticationError
 
 from run_coach.state import AgentState, RaceEvent, Signals, WorkoutSummary
 
@@ -47,9 +47,12 @@ def _login() -> Garmin:
     client = Garmin(email=email, password=password)
     try:
         client.login(tokenstore=TOKENSTORE)
-    except FileNotFoundError:
+    except (FileNotFoundError, GarminConnectAuthenticationError):
+        logger.info("トークンが無効または未保存のため、クレデンシャルでログインします")
         client.login()
-        client.garth.dump(TOKENSTORE)
+
+    # リフレッシュ済みトークンを含め毎回保存（次回セッションで再利用）
+    client.garth.dump(TOKENSTORE)
 
     _garmin_client = client
     return client
