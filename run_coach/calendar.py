@@ -8,6 +8,7 @@ from google.auth.transport.requests import Request  # type: ignore[import-untype
 from google.oauth2.credentials import Credentials  # type: ignore[import-untyped]
 from google_auth_oauthlib.flow import InstalledAppFlow  # type: ignore[import-untyped]
 from googleapiclient.discovery import Resource, build  # type: ignore[import-untyped]
+from googleapiclient.errors import HttpError  # type: ignore[import-untyped]
 
 from run_coach.state import AgentState, CalendarSlot
 
@@ -102,7 +103,7 @@ def fetch_calendar(state: AgentState) -> AgentState:
         service = _get_calendar_service()
         events_by_date = _fetch_events(service)
         state.constraints.available_slots = _build_slots(events_by_date)
-    except Exception:
+    except (HttpError, OSError, ValueError):
         logger.warning("カレンダーの取得に失敗しました", exc_info=True)
 
     return state

@@ -127,12 +127,12 @@ def _build_prompt(state: AgentState) -> str:
 
     if constraints.weather:
         parts.append("\n## 天気予報（今後7日間）")
-        for w in constraints.weather:
+        for day_weather in constraints.weather:
             parts.append(
-                f"- {w.date}: {w.temperature_min}〜{w.temperature_max}℃, "
-                f"降水確率{w.precipitation_probability}%, "
-                f"降水量{w.precipitation_sum}mm, "
-                f"風速{w.wind_speed_max}km/h"
+                f"- {day_weather.date}: {day_weather.temperature_min}〜{day_weather.temperature_max}℃, "
+                f"降水確率{day_weather.precipitation_probability}%, "
+                f"降水量{day_weather.precipitation_sum}mm, "
+                f"風速{day_weather.wind_speed_max}km/h"
             )
 
     today = date.today()
