@@ -14,7 +14,7 @@ DEFAULT_LLM_MODEL = "gpt-4o-mini"
 SYSTEM_PROMPT = """\
 あなたは経験豊富なランニングコーチです。
 選手のプロフィール、最近のワークアウト履歴、レース予測タイム、
-大会情報、カレンダー、天気予報を基に、来週のトレーニング計画を作成してください。
+大会情報、カレンダー、天気予報を基に、指定された期間のトレーニング計画を作成してください。
 
 ## コーチングルール（必ず守ること）
 
@@ -135,13 +135,27 @@ def _build_prompt(state: AgentState) -> str:
                 f"風速{w.wind_speed_max}km/h"
             )
 
-    next_monday = date.today() + timedelta(days=(7 - date.today().weekday()) % 7 or 7)
-    parts.append(f"\n来週の月曜日: {next_monday}")
+    today = date.today()
+    # 今日既にワークアウト済みなら明日から、そうでなければ今日から計画開始
+    today_has_workout = any(w.date == today for w in signals.recent_workouts)
+    plan_start = today + timedelta(days=1) if today_has_workout else today
+    # 次の日曜日まで（plan_startが日曜なら当日含め7日間）
+    days_until_sunday = (6 - plan_start.weekday()) % 7 or 7
+    plan_end = plan_start + timedelta(days=days_until_sunday)
+
+    parts.append(f"\n今日の日付: {today}")
+    if today_has_workout:
+        parts.append("※ 今日は既にワークアウト済みです。")
+    parts.append(f"計画期間: {plan_start} 〜 {plan_end}")
     parts.append(
         f"週間走行回数の目安: {profile.runs_per_week.min}〜{profile.runs_per_week.max}回"
     )
     parts.append(
-        "\n上記を踏まえて、来週のトレーニング計画をJSON形式で作成してください。"
+        "\n上記を踏まえて、指定された計画期間のトレーニング計画をJSON形式で作成してください。"
+    )
+    parts.append(
+        "注意: 計画期間の初日や翌日にワークアウトを入れることは必須ではありません。"
+        "直近の疲労度やカレンダーを考慮し、休養日を含め最適なスケジュールを組んでください。"
     )
 
     return "\n".join(parts)
