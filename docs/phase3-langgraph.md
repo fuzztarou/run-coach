@@ -1,10 +1,11 @@
 # Phase 3: LangGraph でフロー制御移行
 
-自前実装をLangGraphのステートグラフに移行し、セルフチェックの条件分岐をグラフで管理。
+自前実装のフロー制御をLangGraphのステートグラフに置き換える。機能追加はしない。
 
 ## ゴール
 
-自前のフロー制御をLangGraphに置き換え、セルフチェックや対話ループを実装する。
+Phase 1〜2で作った自前のフロー制御（関数の順次呼び出し + if文分岐）をLangGraphのStateGraphに載せ替える。
+**既存の動作を変えずに、フロー制御の仕組みだけを入れ替える。**
 
 ## フロー
 
@@ -14,24 +15,18 @@ flowchart TB
     START --> FG[fetch_garmin<br>Node]
     FG --> FC[fetch_calendar<br>Node]
     FC --> FW[fetch_weather<br>Node]
-    FW --> RET[retrieve<br>RAG検索 Node]
-    RET --> GR[apply_guardrails<br>Node]
+    FW --> GR[apply_guardrails<br>Node]
     GR --> GEN[generate_plan<br>LLM Node]
     GEN --> CHK[self_check<br>Node]
 
     CHK -->|OK| OUT[output_plan<br>Node]
     CHK -->|NG: ルール違反| GEN
 
-    OUT --> UF{ユーザー確認}
-    UF -->|承認| SAVE[save_decision<br>Node]
-    UF -->|修正要望| GEN
-
-    SAVE --> END((END))
+    OUT --> END((END))
 
     style START fill:#2ed573,color:#fff
     style END fill:#2ed573,color:#fff
     style CHK fill:#e74c3c,color:#fff
-    style UF fill:#4a9eff,color:#fff
 ```
 
 ## やること
@@ -40,9 +35,6 @@ flowchart TB
 - [ ] 各関数をLangGraphのNodeとして登録
 - [ ] Edge（直線フロー）の定義
 - [ ] Conditional Edge（セルフチェック結果による分岐）の定義
-- [ ] ヒューマンリフレクション（ユーザー確認ループ）の実装
-- [ ] RAG部分にLangChainのRetrieverを導入
-- [ ] ツールをLangChainのTool形式に移行
 
 ## 自前実装 → LangGraph の対応
 
@@ -60,24 +52,22 @@ from langgraph.graph import StateGraph, END
 
 graph = StateGraph(AgentState)
 
-# ノード登録
+# ノード登録（Phase 1〜2の既存関数をそのまま使う）
 graph.add_node("fetch_garmin", fetch_garmin)
 graph.add_node("fetch_calendar", fetch_calendar)
 graph.add_node("fetch_weather", fetch_weather)
-graph.add_node("retrieve", retrieve_context)
 graph.add_node("apply_guardrails", apply_guardrails)
 graph.add_node("generate_plan", generate_plan)
 graph.add_node("self_check", self_check)
 graph.add_node("output_plan", output_plan)
-graph.add_node("save_decision", save_decision)
 
 # エッジ
 graph.set_entry_point("fetch_garmin")
 graph.add_edge("fetch_garmin", "fetch_calendar")
 graph.add_edge("fetch_calendar", "fetch_weather")
-graph.add_edge("fetch_weather", "retrieve")
-graph.add_edge("retrieve", "apply_guardrails")
+graph.add_edge("fetch_weather", "apply_guardrails")
 graph.add_edge("apply_guardrails", "generate_plan")
+graph.add_edge("generate_plan", "self_check")
 
 # 条件分岐: セルフチェック
 graph.add_conditional_edges("self_check", check_result, {
@@ -85,13 +75,7 @@ graph.add_conditional_edges("self_check", check_result, {
     "ng": "generate_plan",
 })
 
-# 条件分岐: ユーザー確認
-graph.add_conditional_edges("output_plan", user_feedback, {
-    "approved": "save_decision",
-    "revise": "generate_plan",
-})
-
-graph.add_edge("save_decision", END)
+graph.add_edge("output_plan", END)
 
 app = graph.compile()
 ```
