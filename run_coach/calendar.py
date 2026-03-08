@@ -58,10 +58,25 @@ def _fetch_events(service) -> dict[date, list[str]]:
 
     events_by_date: dict[date, list[str]] = {}
     for event in events_result.get("items", []):
-        start = event["start"].get("dateTime", event["start"].get("date", ""))
-        event_date = date.fromisoformat(start[:10])
         summary = event.get("summary", "(無題)")
-        events_by_date.setdefault(event_date, []).append(summary)
+        start_dt = event["start"].get("dateTime")
+        if start_dt:
+            event_date = date.fromisoformat(start_dt[:10])
+            start_time = datetime.fromisoformat(start_dt).strftime("%H:%M")
+            end_dt = event["end"].get("dateTime", "")
+            end_time = (
+                datetime.fromisoformat(end_dt).strftime("%H:%M") if end_dt else ""
+            )
+            label = (
+                f"{start_time}-{end_time} {summary}"
+                if end_time
+                else f"{start_time} {summary}"
+            )
+        else:
+            start_date_str = event["start"].get("date", "")
+            event_date = date.fromisoformat(start_date_str)
+            label = f"終日: {summary}"
+        events_by_date.setdefault(event_date, []).append(label)
 
     return events_by_date
 

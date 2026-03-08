@@ -123,7 +123,7 @@ def _build_prompt(state: AgentState) -> str:
             if slot.available:
                 parts.append(f"- {slot.date}: 空き")
             else:
-                parts.append(f"- {slot.date}: 予定あり ({', '.join(slot.events)})")
+                parts.append(f"- {slot.date}: {' / '.join(slot.events)}")
 
     if constraints.weather:
         parts.append("\n## 天気予報（今後7日間）")
