@@ -1,12 +1,15 @@
 from __future__ import annotations
 
+import logging
 import os
 from datetime import date, timedelta
 from pathlib import Path
 
 from garminconnect import Garmin
 
-from run_coach.state import AgentState, Signals, WorkoutSummary
+from run_coach.state import AgentState, RaceEvent, Signals, WorkoutSummary
+
+logger = logging.getLogger(__name__)
 
 # トークン保存先
 TOKENSTORE = str(Path.home() / ".garminconnect")
@@ -14,6 +17,8 @@ TOKENSTORE = str(Path.home() / ".garminconnect")
 ACTIVITY_FETCH_LIMIT = 10
 # ワークアウト履歴の取得対象期間（日数）
 LOOKBACK_DAYS = 14
+# 大会情報のスキャン対象期間（月数）
+RACE_SCAN_MONTHS = 12
 # 取得対象のアクティビティタイプ
 TARGET_ACTIVITY_TYPES = (
     "running",
@@ -26,8 +31,17 @@ TARGET_ACTIVITY_TYPES = (
 )
 
 
+# fetch_workouts / fetch_races で共有するクライアントキャッシュ。
+# _login() を複数回呼んでも実際のログインは初回のみ。
+_garmin_client: Garmin | None = None
+
+
 def _login() -> Garmin:
     """Login to Garmin Connect. Uses saved tokens if available, otherwise credentials."""
+    global _garmin_client
+    if _garmin_client is not None:
+        return _garmin_client
+
     email = os.environ.get("GARMIN_EMAIL", "")
     password = os.environ.get("GARMIN_PASSWORD", "")
     client = Garmin(email=email, password=password)
@@ -36,6 +50,8 @@ def _login() -> Garmin:
     except FileNotFoundError:
         client.login()
         client.garth.dump(TOKENSTORE)
+
+    _garmin_client = client
     return client
 
 
@@ -74,7 +90,7 @@ def summarize_activity(activity: dict) -> WorkoutSummary | None:
     )
 
 
-def fetch_garmin(state: AgentState) -> AgentState:
+def fetch_workouts(state: AgentState) -> AgentState:
     """Fetch recent workouts from Garmin Connect and populate state.signals."""
     client = _login()
 
@@ -99,4 +115,79 @@ def fetch_garmin(state: AgentState) -> AgentState:
         recent_workouts=sorted(workouts, key=lambda w: w.date),
         race_predictions=race_predictions,
     )
+    return state
+
+
+def _fetch_race_detail(client: Garmin, event_id: int) -> RaceEvent | None:
+    """Fetch race event detail from Garmin Calendar API."""
+    try:
+        event_detail = client.garth.connectapi(f"/calendar-service/event/{event_id}")
+        event_name = event_detail.get("eventName", event_detail.get("title", "Unknown"))
+        event_date_str = event_detail.get("date", "")
+        if not event_date_str:
+            return None
+        event_date = date.fromisoformat(event_date_str[:10])
+        distance_m = event_detail.get("distance")
+        distance_km = round(distance_m / 1000, 2) if distance_m else None
+        goal_time = event_detail.get("goalTimeInSeconds")
+        location = event_detail.get("location")
+        return RaceEvent(
+            event_name=event_name,
+            date=event_date,
+            distance_km=distance_km,
+            goal_time_seconds=goal_time,
+            location=location,
+        )
+    except Exception:
+        logger.warning("レース詳細の取得に失敗: event_id=%s", event_id, exc_info=True)
+        return None
+
+
+def fetch_races(state: AgentState) -> AgentState:
+    """Fetch upcoming race events from Garmin Calendar and populate state.constraints.races."""
+    try:
+        client = _login()
+    except Exception:
+        logger.warning(
+            "Garminログインに失敗したため大会情報をスキップします", exc_info=True
+        )
+        return state
+
+    today = date.today()
+    races: list[RaceEvent] = []
+
+    for month_offset in range(RACE_SCAN_MONTHS):
+        target_month = today.month + month_offset
+        target_year = today.year
+        if target_month > 12:
+            target_month -= 12
+            target_year += 1
+
+        try:
+            # Garmin Calendar APIの月インデックス: 0始まり
+            monthly_calendar = client.garth.connectapi(
+                f"/calendar-service/year/{target_year}/month/{target_month - 1}",
+            )
+        except Exception as e:
+            logger.warning(
+                "カレンダー取得失敗: %d/%d (%s)", target_year, target_month, e
+            )
+            continue
+
+        for item in monthly_calendar.get("calendarItems", []):
+            if item.get("itemType") != "event" or not item.get("isRace"):
+                continue
+            event_id = item.get("id")
+            if not event_id:
+                continue
+            race = _fetch_race_detail(client, event_id)
+            if race:
+                races.append(race)
+
+    if races:
+        # 最も近い大会をprimaryに
+        races.sort(key=lambda r: r.date)
+        races[0].is_primary = True
+
+    state.constraints.races = races
     return state

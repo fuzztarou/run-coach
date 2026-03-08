@@ -91,6 +91,7 @@ uv add --dev <package>
 
 ### 規約
 - 命名: スネークケース
+- 変数名は中身が想像できる具体的な名前にする（`resp` → `event_detail`, `monthly_calendar` など）
 - マジックナンバーを使わない。モジュール先頭で定数として定義する
 - 各処理は state を受け取り state を返す関数にする（LangGraph移行を見据える）
 - テストは各Phaseで書く

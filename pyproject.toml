@@ -5,6 +5,9 @@ description = "AI-powered running coach CLI"
 requires-python = ">=3.11.5"
 dependencies = [
     "garminconnect>=0.2.38",
+    "google-api-python-client>=2.170.0",
+    "google-auth-httplib2>=0.2.0",
+    "google-auth-oauthlib>=1.2.1",
     "openai>=2.26.0",
     "pydantic>=2.12.5",
     "pyyaml>=6.0.3",
