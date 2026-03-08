@@ -1,4 +1,4 @@
-# Phase 2: データ蓄積 + ログ
+# Phase 6: データ蓄積 + ログ
 
 SQLiteにデータを蓄積し、LLMの入出力ログとHuman-in-the-loopのログ基盤を構築。
 
@@ -190,5 +190,5 @@ class AgentState(BaseModel):
     signals: Signals
     constraints: Constraints
     plan: Plan | None = None
-    logs: list[dict] | None = None  # ← Phase 2で追加
+    logs: list[dict] | None = None  # ← Phase 6で追加
 ```

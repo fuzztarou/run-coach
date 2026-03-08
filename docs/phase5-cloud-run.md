@@ -1,6 +1,6 @@
-# Phase 5: 本番化 + 拡張
+# Phase 5: Cloud Run + Cloud Scheduler デプロイ
 
-Cloud Runにデプロイし、LINE連携とLLMOps評価基盤を構築。
+Cloud Runにデプロイし、自動実行環境を構築。
 
 ## ゴール
 
@@ -101,7 +101,7 @@ flowchart LR
 
 ## テスト方針
 
-- [ ] 既存テスト全通し: Phase 1-4のテストがCloud Run環境でも通ること
+- [ ] 既存テスト全通し: Phase 1-4のテストがCloud Run環境でも通ること（LangGraph含む）
 - [ ] Webhook処理: LINEからのリクエストを正しくパースできるか
 - [ ] Push通知: LLM出力→LINE送信の変換が正しいか
 - [ ] 認証: Secret Managerからの認証情報取得が動くか

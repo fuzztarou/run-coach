@@ -1,6 +1,6 @@
-# Phase 4: LangChain / LangGraph で書き換え
+# Phase 3: LangGraph でフロー制御移行
 
-自前実装をLangGraphのステートグラフに移行し、LangChainを必要な箇所に導入。
+自前実装をLangGraphのステートグラフに移行し、セルフチェックの条件分岐をグラフで管理。
 
 ## ゴール
 
@@ -98,7 +98,7 @@ app = graph.compile()
 
 ## テスト方針
 
-最重要: **Phase 1〜3で書いたテストがそのまま通ること**。
+最重要: **Phase 1〜2で書いたテストがそのまま通ること**。
 
 - [ ] 既存テスト全通し: LangGraph移行で動作が変わっていないことを確認
 - [ ] ノード単体テスト: 各ノードが正しいstateを返すか
@@ -109,7 +109,7 @@ app = graph.compile()
 ```python
 # テスト例
 def test_existing_tests_still_pass():
-    """Phase 1-3のテストが全て通ることを確認"""
+    """Phase 1-2のテストが全て通ることを確認"""
     # pytest で既存テストを実行するだけ
     # 移行の安全ネット
 
