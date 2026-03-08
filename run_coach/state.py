@@ -103,3 +103,5 @@ class AgentState(BaseModel):
     signals: Signals = Field(default_factory=Signals)
     constraints: Constraints = Field(default_factory=Constraints)
     plan: Plan | None = None
+    review_result: str | None = None  # "ok" | "ng"
+    review_violations: list[str] = Field(default_factory=list)
