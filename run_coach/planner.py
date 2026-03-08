@@ -13,16 +13,19 @@ DEFAULT_LLM_MODEL = "gpt-4o-mini"
 
 SYSTEM_PROMPT = """\
 あなたは経験豊富なランニングコーチです。
-選手のプロフィール、最近のワークアウト履歴、レース予測タイムを基に、
-来週のトレーニング計画を作成してください。
+選手のプロフィール、最近のワークアウト履歴、レース予測タイム、
+大会情報、カレンダー、天気予報を基に、来週のトレーニング計画を作成してください。
 
-以下の原則に従ってください:
-- 漸進的過負荷: 週間走行距離の増加は10%以内
-- ハード/イージーの交互配置
-- 怪我の履歴を考慮し、無理のない計画にする
-- 選手の目標レースペースを意識した練習を含める
-- 休養日を適切に配置する
-- ロング走など長時間のワークアウトは土日または祝日に配置する（平日は短めのメニューにする）
+## コーチングルール（必ず守ること）
+
+1. 高強度セッション（tempo, intervals）は週2回まで
+2. ロング走の翌日は必ずイージーランまたは休養
+3. 週間走行距離の増加は前週比10%以内
+4. レース3週間前からテーパリング開始（走行距離を段階的に減らす）
+5. HRV低下 + 睡眠不良の場合はリカバリー優先
+6. 降水確率60%以上の日は室内トレや代替メニューを提案
+7. カレンダーで予定が多い日にはワークアウトを入れない
+8. ロング走は土日または祝日に配置する（平日は短めのメニューにする）
 
 出力は以下のJSON形式のみで返してください（説明文は不要）:
 
@@ -98,6 +101,38 @@ def _build_prompt(state: AgentState) -> str:
             parts.append(
                 f"- {w.date} | {w.type} | {w.distance_km}km | "
                 f"{w.duration_min}min | {w.avg_pace}/km{hr_str}{te_str}"
+            )
+
+    constraints = state.constraints
+
+    if constraints.races:
+        parts.append("\n## 大会情報")
+        for r in constraints.races:
+            primary = " ★メインレース" if r.is_primary else ""
+            dist = f" {r.distance_km}km" if r.distance_km else ""
+            goal = ""
+            if r.goal_time_seconds:
+                h = int(r.goal_time_seconds // 3600)
+                m = int((r.goal_time_seconds % 3600) // 60)
+                goal = f" 目標: {h}:{m:02d}"
+            parts.append(f"- {r.date} | {r.event_name}{dist}{goal}{primary}")
+
+    if constraints.available_slots:
+        parts.append("\n## カレンダー（今後7日間）")
+        for slot in constraints.available_slots:
+            if slot.available:
+                parts.append(f"- {slot.date}: 空き")
+            else:
+                parts.append(f"- {slot.date}: 予定あり ({', '.join(slot.events)})")
+
+    if constraints.weather:
+        parts.append("\n## 天気予報（今後7日間）")
+        for w in constraints.weather:
+            parts.append(
+                f"- {w.date}: {w.temperature_min}〜{w.temperature_max}℃, "
+                f"降水確率{w.precipitation_probability}%, "
+                f"降水量{w.precipitation_sum}mm, "
+                f"風速{w.wind_speed_max}km/h"
             )
 
     next_monday = date.today() + timedelta(days=(7 - date.today().weekday()) % 7 or 7)
