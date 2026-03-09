@@ -37,8 +37,11 @@ run-coach/
 │   ├── garmin.py          # Garmin データ取得
 │   ├── calendar.py        # カレンダー取得
 │   ├── weather.py         # 天気予報取得
-│   ├── guardrails.py      # コーチングルール
+│   ├── config.py          # 設定読み込み (settings.yaml / profile.yaml)
+│   ├── graph.py           # LangGraph グラフ定義
+│   ├── prompt.py          # LLM プロンプトテンプレート
 │   ├── planner.py         # LLM プラン生成
+│   ├── plan_review.py     # セルフチェック（コーチングルール検証）
 │   └── formatter.py       # JSON → Markdown 変換
 ├── tests/                 # テスト
 ├── docs/                  # Phase毎の詳細設計
@@ -96,7 +99,7 @@ uv add --dev <package>
 - 命名: スネークケース
 - 変数名は中身が想像できる具体的な名前にする（`resp` → `event_detail`, `monthly_calendar` など）
 - マジックナンバーを使わない。モジュール先頭で定数として定義する
-- 各処理は state を受け取り state を返す関数にする（LangGraph移行を見据える）
+- 各処理は state を受け取り state を返す関数にする（LangGraphノード）
 - テストは各Phaseで書く
 
 ### セキュリティ
