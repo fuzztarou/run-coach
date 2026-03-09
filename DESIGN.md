@@ -467,13 +467,13 @@ predictions = client.get_race_predictions()
 event = client.garth.get(f"/calendar-service/event/{event_id}")
 # レスポンス例:
 # {
-#   "eventName": "イーハトーブ花巻ハーフマラソン",
+#   "eventName": "さくら市ハーフマラソン",
 #   "date": "2026-04-26",
 #   "completionTarget": {"value": 21.0, "unit": "kilometer"},
 #   "eventTimeLocal": {"startTimeHhMm": "09:00", "timeZoneId": "Asia/Tokyo"},
-#   "location": "日本、岩手県花巻市",
+#   "location": "日本、栃木県さくら市",
 #   "eventCustomization": {
-#     "customGoal": {"value": 8190.0, "unit": "second"},  # 目標タイム
+#     "customGoal": {"value": 6300.0, "unit": "second"},  # 目標タイム
 #     "isPrimaryEvent": true
 #   },
 #   "race": true
