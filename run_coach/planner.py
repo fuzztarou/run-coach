@@ -40,7 +40,10 @@ PLANNER_SYSTEM_PROMPT = (
 
 
 def generate_plan_with_review(state: AgentState) -> AgentState:
-    """generate_plan + review_plan をリトライ付きで実行する。"""
+    """generate_plan + review_plan をリトライ付きで実行する。
+
+    LangGraph移行前の互換関数。既存テストで使用。
+    """
     from run_coach.plan_review import review_plan
 
     state = generate_plan(state)
@@ -49,25 +52,26 @@ def generate_plan_with_review(state: AgentState) -> AgentState:
     retries = 0
     while state.review_result == "ng" and retries < PLAN_REVIEW_MAX_RETRIES:
         retries += 1
-        violations = state.review_violations
-        state.review_result = None
-        state.review_violations = []
-        state = generate_plan(state, feedback=violations)
+        # review_violationsはstate内に残っているのでgenerate_planが参照する
+        state = generate_plan(state)
         state = review_plan(state)
 
     return state
 
 
-def generate_plan(state: AgentState, feedback: list[str] | None = None) -> AgentState:
+def generate_plan(state: AgentState) -> AgentState:
     """Generate a weekly training plan using LLM."""
+    print("トレーニング計画を生成中...")
     prompt = build_prompt(state)
-    if feedback:
+    if state.review_violations:
         prompt += "\n\n## 前回のプランで指摘された問題\n"
-        prompt += "\n".join(f"- {v}" for v in feedback)
+        prompt += "\n".join(f"- {v}" for v in state.review_violations)
         prompt += "\n\nこれらの問題を修正した計画を作成してください。"
 
     raw = call_llm(prompt, system=PLANNER_SYSTEM_PROMPT)
 
     data = json.loads(raw)
     state.plan = Plan(**data)
+    state.review_violations = []
+    state.review_result = None
     return state

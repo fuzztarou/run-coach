@@ -105,3 +105,4 @@ class AgentState(BaseModel):
     plan: Plan | None = None
     review_result: str | None = None  # "ok" | "ng"
     review_violations: list[str] = Field(default_factory=list)
+    review_retry_count: int = 0

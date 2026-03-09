@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from run_coach.state import Plan
+from run_coach.state import AgentState, Plan
 
 INTENSITY_LABEL = {
     "low": "低",
@@ -49,3 +49,11 @@ def plan_to_markdown(plan: Plan) -> str:
     )
 
     return "\n".join(lines)
+
+
+def output_plan(state: AgentState) -> AgentState:
+    """LangGraphノード: プランをMarkdownで出力する。"""
+    if state.plan:
+        print()
+        print(plan_to_markdown(state.plan))
+    return state

@@ -31,6 +31,14 @@ PLAN_REVIEW_SYSTEM_PROMPT = (
 )
 
 
+def self_check(state: AgentState) -> AgentState:
+    """LangGraphノード: プランレビュー + リトライカウンター更新。"""
+    print("プランをセルフチェック中...")
+    state = review_plan(state)
+    state.review_retry_count += 1
+    return state
+
+
 def review_plan(state: AgentState) -> AgentState:
     """LLMでプランを検証し、結果をstateに記録する。"""
     if state.plan is None:

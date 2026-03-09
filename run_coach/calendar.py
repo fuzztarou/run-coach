@@ -95,6 +95,7 @@ def _build_slots(events_by_date: dict[date, list[str]]) -> list[CalendarSlot]:
 
 def fetch_calendar(state: AgentState) -> AgentState:
     """Fetch Google Calendar events and populate state.constraints.available_slots."""
+    print("カレンダーを取得中...")
     if not CLIENT_SECRET_PATH.exists():
         logger.info("client_secret.jsonが未配置のためカレンダー取得をスキップします")
         return state
@@ -106,4 +107,5 @@ def fetch_calendar(state: AgentState) -> AgentState:
     except (HttpError, OSError, ValueError):
         logger.warning("カレンダーの取得に失敗しました", exc_info=True)
 
+    print(f"  {len(state.constraints.available_slots)} 日分のスロットを取得しました")
     return state
