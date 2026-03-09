@@ -1,4 +1,4 @@
-# Phase 6: データ蓄積 + ログ
+# Phase 4: データ蓄積 + ログ
 
 SQLiteにデータを蓄積し、LLMの入出力ログとHuman-in-the-loopのログ基盤を構築。
 
@@ -47,17 +47,24 @@ flowchart TB
     style LLM fill:#ff9f43,color:#fff
 ```
 
-### ③ 振り返り入力時（ユーザー起点・後から）
+### ③ 振り返り取得（Garmin descriptionから）
+
+ユーザーはラン後にGarminアプリのワークアウト詳細のメモ欄（description）に振り返りを入力する。
+CLI実行時にワークアウトと一緒にdescriptionを取得し、Outcomeとして保存する。
 
 ```mermaid
 flowchart LR
-    UF[ユーザー<br>振り返り入力] --> O[Outcome作成<br>RPE / 痛み / コメント]
+    UG[ユーザー<br>Garminアプリで<br>メモ入力] --> GA[Garmin API<br>description取得]
+    GA --> O[Outcome作成<br>メモをパース]
     O --> DB[(SQLite<br>outcomes)]
     O -.->|workout_idで紐付け| W[(SQLite<br>workouts)]
 
-    style UF fill:#e74c3c,color:#fff
+    style UG fill:#e74c3c,color:#fff
     style DB fill:#9b59b6,color:#fff
 ```
+
+> **Note**: Phase 7（LINE通知）導入後は、LINEからの振り返り入力も追加予定。
+> Garmin descriptionは最もシンプルな振り返り収集手段として引き続き利用。
 
 ### タイミングまとめ
 
@@ -65,7 +72,7 @@ flowchart LR
 |--|--|--|
 | ワークアウト保存 | CLI実行時に未保存分を取得 | `workouts` |
 | プラン生成 | ユーザーがCLI実行 | `llm_calls` + `decisions` |
-| 振り返り入力 | ユーザーが任意のタイミングで入力 | `outcomes`（workout_idで紐付け） |
+| 振り返り取得 | CLI実行時にGarmin descriptionから | `outcomes`（workout_idで紐付け） |
 
 ## やること
 
@@ -74,7 +81,7 @@ flowchart LR
 - [ ] LLM入出力ログの記録（プロンプト、レスポンス、トークン数、レイテンシ）
 - [ ] Decisionテーブル: 生成したプラン + 入力データの要約
 - [ ] Outcomeテーブル: 実施結果 + 主観評価
-- [ ] CLIでのフィードバック入力UI
+- [ ] Garmin descriptionからの振り返り取得・パース
 
 ## SQLiteテーブル設計
 
@@ -190,5 +197,5 @@ class AgentState(BaseModel):
     signals: Signals
     constraints: Constraints
     plan: Plan | None = None
-    logs: list[dict] | None = None  # ← Phase 6で追加
+    logs: list[dict] | None = None  # ← Phase 4で追加
 ```

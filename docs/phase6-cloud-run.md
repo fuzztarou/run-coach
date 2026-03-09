@@ -1,10 +1,10 @@
-# Phase 5: Cloud Run + Cloud Scheduler デプロイ
+# Phase 6: Cloud Run + Cloud Scheduler デプロイ
 
 Cloud Runにデプロイし、自動実行環境を構築。
 
 ## ゴール
 
-Macを閉じていても自動でプラン生成・LINE通知が動く状態にする。
+Macを閉じていても自動でプラン生成が動く状態にする。Phase 7（LINE通知）の前提基盤。
 
 ## フロー
 
@@ -20,11 +20,11 @@ flowchart TB
         FW --> GR[ガードレール]
         GR --> GEN[LLM: プラン生成]
         GEN --> CHK[セルフチェック]
-        CHK -->|OK| PUSH[LINE Push通知]
+        CHK -->|OK| OUT[output_plan<br>+ Calendar同期]
         CHK -->|NG| GEN
     end
 
-    PUSH --> U[ユーザーのLINE]
+    OUT -.->|Phase 7| LINE[LINE Push通知]
 
     style CS fill:#4a9eff,color:#fff
     style CR fill:#f5f5f5,color:#333
@@ -38,19 +38,19 @@ flowchart TB
 - [ ] Cloud Runサービスのデプロイ
 - [ ] Cloud Schedulerの設定（週次プラン生成トリガー）
 - [ ] Google Calendar APIのサービスアカウント設定
-- [ ] Secret Managerで認証情報を管理（Garmin / LLM API / LINE）
+- [ ] Secret Managerで認証情報を管理（Garmin / LLM API）
 
 ### HTTPエンドポイント
 
-- [ ] `/generate` — Cloud Schedulerから呼ばれ、プラン生成 → LINE Push通知
+- [ ] `/generate` — Cloud Schedulerから呼ばれ、プラン生成 → Calendar同期
 - [ ] ヘルスチェック用エンドポイント
 
 ## テスト方針
 
-- [ ] 既存テスト全通し: Phase 1〜4のテストがCloud Run環境でも通ること
+- [ ] 既存テスト全通し: Phase 1〜5のテストがCloud Run環境でも通ること
 - [ ] 認証: Secret Managerからの認証情報取得が動くか
-- [ ] HTTPエンドポイント: `/generate` が正しくプラン生成→LINE通知を実行するか
-- [ ] E2Eテスト: Cloud Scheduler → Cloud Run → LINE の一連の流れ
+- [ ] HTTPエンドポイント: `/generate` が正しくプラン生成を実行するか
+- [ ] E2Eテスト: Cloud Scheduler → Cloud Run の一連の流れ
 
 ```python
 # テスト例

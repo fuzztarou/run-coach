@@ -1,12 +1,19 @@
-# Phase 4: LINE通知
+# Phase 7: LINE通知 + 振り返り対話
 
-LINE Messaging APIで週次プランをユーザーに配信する。
+LINE Messaging APIで週次プラン配信と、ラン後の振り返り入力を実現する。
 
 ## ゴール
 
-生成した週次プランをLINEで通知し、CLIを開かなくても結果を受け取れるようにする。
+- 生成した週次プランをLINEで通知し、CLIを開かなくても結果を受け取れるようにする
+- ラン後にLINEで振り返りを入力できるようにする（Garmin descriptionの補完）
+
+## 前提
+
+- Phase 6（Cloud Run）が完了していること（Webhook受け口が必要）
 
 ## フロー
+
+### プラン通知
 
 ```mermaid
 flowchart LR
@@ -15,6 +22,20 @@ flowchart LR
     PUSH --> U[ユーザーのLINE]
 
     style PUSH fill:#06C755,color:#fff
+```
+
+### 振り返り対話
+
+```mermaid
+flowchart LR
+    G[Garmin<br>新着ラン検知] --> PUSH[LINE Push<br>「どうだった？」]
+    PUSH --> U[ユーザー<br>LINE返信]
+    U --> WH[Cloud Run<br>Webhook受信]
+    WH --> DB[(SQLite<br>outcomes)]
+    WH -.->|descriptionに書き戻し| G2[Garmin API]
+
+    style PUSH fill:#06C755,color:#fff
+    style DB fill:#9b59b6,color:#fff
 ```
 
 ## やること
@@ -30,7 +51,8 @@ flowchart LR
 - [ ] LINE Messaging API クライアント (`run_coach/line.py`)
 - [ ] プラン → LINEメッセージ変換 (`format_plan_for_line()`)
 - [ ] Push通知送信 (`send_plan_notification()`)
-- [ ] 環境変数: `LINE_CHANNEL_ACCESS_TOKEN`, `LINE_USER_ID`
+- [ ] Webhook受信 → 振り返りをSQLite保存 + Garmin書き戻し
+- [ ] 環境変数: `LINE_CHANNEL_ACCESS_TOKEN`, `LINE_USER_ID`, `LINE_CHANNEL_SECRET`
 
 ## メッセージ形式（案）
 
