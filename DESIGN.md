@@ -205,6 +205,7 @@ flowchart TB
 | **1.5** | カレンダー/天気/大会 + ガードレール | [docs/phase1.5-datasources.md](docs/phase1.5-datasources.md) |
 | **2** | セルフチェック: 別LLM呼び出しでプラン検証 | [docs/phase2-self-check.md](docs/phase2-self-check.md) |
 | **3** | LangGraph: フロー制御移行 | [docs/phase3-langgraph.md](docs/phase3-langgraph.md) |
+| **3.5** | カレンダー同期: プランをGoogle Calendarに登録 | [docs/phase3.5-calendar-sync.md](docs/phase3.5-calendar-sync.md) |
 | **4** | LINE通知: 週次プラン配信 | [docs/phase4-line.md](docs/phase4-line.md) |
 | **5** | Cloud Run + Cloud Scheduler デプロイ | [docs/phase5-cloud-run.md](docs/phase5-cloud-run.md) |
 | **6** | SQLite蓄積 + LLMログ + Decision/Outcome | [docs/phase6-data-logging.md](docs/phase6-data-logging.md) |

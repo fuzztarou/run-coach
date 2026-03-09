@@ -3,7 +3,7 @@ from __future__ import annotations
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.state import CompiledStateGraph
 
-from run_coach.calendar import fetch_calendar
+from run_coach.calendar import fetch_calendar, sync_plan_to_calendar
 from run_coach.formatter import output_plan
 from run_coach.garmin import fetch_races, fetch_workouts
 from run_coach.plan_review import self_check
@@ -32,6 +32,7 @@ def build_graph() -> StateGraph:
     graph.add_node("generate_plan", generate_plan)
     graph.add_node("self_check", self_check)
     graph.add_node("output_plan", output_plan)
+    graph.add_node("sync_calendar", sync_plan_to_calendar)
 
     graph.add_edge(START, "fetch_workouts")
     graph.add_edge("fetch_workouts", "fetch_races")
@@ -44,7 +45,8 @@ def build_graph() -> StateGraph:
         _should_continue,
         {"ok": "output_plan", "ng": "generate_plan"},
     )
-    graph.add_edge("output_plan", END)
+    graph.add_edge("output_plan", "sync_calendar")
+    graph.add_edge("sync_calendar", END)
 
     return graph
 

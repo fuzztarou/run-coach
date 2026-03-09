@@ -10,12 +10,12 @@ from google_auth_oauthlib.flow import InstalledAppFlow  # type: ignore[import-un
 from googleapiclient.discovery import Resource, build  # type: ignore[import-untyped]
 from googleapiclient.errors import HttpError  # type: ignore[import-untyped]
 
-from run_coach.state import AgentState, CalendarSlot
+from run_coach.state import AgentState, CalendarSlot, WorkoutPlan
 
 logger = logging.getLogger(__name__)
 
 CALENDAR_LOOKAHEAD_DAYS = 7
-SCOPES = ["https://www.googleapis.com/auth/calendar.readonly"]
+SCOPES = ["https://www.googleapis.com/auth/calendar.events"]
 RUN_COACH_DIR = Path.home() / ".run-coach"
 TOKEN_PATH = RUN_COACH_DIR / "token.json"
 CLIENT_SECRET_PATH = RUN_COACH_DIR / "client_secret.json"
@@ -108,4 +108,120 @@ def fetch_calendar(state: AgentState) -> AgentState:
         logger.warning("カレンダーの取得に失敗しました", exc_info=True)
 
     print(f"  {len(state.constraints.available_slots)} 日分のスロットを取得しました")
+    return state
+
+
+# ---------------------------------------------------------------------------
+# Phase 3.5: プランをGoogle Calendarに同期
+# ---------------------------------------------------------------------------
+
+EXTENDED_PROPERTY_KEY = "created_by"
+EXTENDED_PROPERTY_VALUE = "run-coach"
+
+WORKOUT_TYPE_LABEL: dict[str, str] = {
+    "easy_run": "イージーラン",
+    "tempo": "テンポ走",
+    "intervals": "インターバル",
+    "long_run": "ロング走",
+    "rest": "休息",
+    "cross_training": "クロストレーニング",
+}
+
+INTENSITY_LABEL: dict[str, str] = {
+    "low": "低",
+    "moderate": "中",
+    "high": "高",
+}
+
+
+def _delete_run_coach_events(service: Resource, time_min: date, time_max: date) -> int:
+    """対象期間内のrun-coachが作成したイベントを削除する。削除件数を返す。"""
+    events_result = (
+        service.events()
+        .list(
+            calendarId="primary",
+            timeMin=f"{time_min}T00:00:00Z",
+            timeMax=f"{time_max}T00:00:00Z",
+            privateExtendedProperty=f"{EXTENDED_PROPERTY_KEY}={EXTENDED_PROPERTY_VALUE}",
+            singleEvents=True,
+        )
+        .execute()
+    )
+
+    deleted_count = 0
+    for event in events_result.get("items", []):
+        service.events().delete(calendarId="primary", eventId=event["id"]).execute()
+        deleted_count += 1
+
+    return deleted_count
+
+
+def _build_event_body(workout: WorkoutPlan) -> dict:
+    """WorkoutPlanからGoogle Calendar APIのイベントボディを構築する。"""
+    workout_label = WORKOUT_TYPE_LABEL.get(workout.workout_type, workout.workout_type)
+    duration = workout.duration_min or 0
+    summary = f"{workout_label} ({duration}min)" if duration else workout_label
+
+    description_parts: list[str] = []
+    if workout.purpose:
+        description_parts.append(f"目的: {workout.purpose}")
+    if workout.intensity:
+        intensity_label = INTENSITY_LABEL.get(workout.intensity, workout.intensity)
+        description_parts.append(f"強度: {intensity_label}")
+    if workout.max_hr:
+        description_parts.append(f"HR上限: {workout.max_hr}")
+    if workout.notes:
+        description_parts.append(workout.notes)
+
+    end_date = workout.date + timedelta(days=1)
+
+    return {
+        "summary": summary,
+        "start": {"date": str(workout.date)},
+        "end": {"date": str(end_date)},
+        "description": "\n".join(description_parts),
+        "extendedProperties": {
+            "private": {EXTENDED_PROPERTY_KEY: EXTENDED_PROPERTY_VALUE}
+        },
+    }
+
+
+def _create_workout_event(service: Resource, workout: WorkoutPlan) -> None:
+    """WorkoutPlanをGoogle Calendarにイベントとして作成する。"""
+    body = _build_event_body(workout)
+    service.events().insert(calendarId="primary", body=body).execute()
+
+
+def sync_plan_to_calendar(state: AgentState) -> AgentState:
+    """LangGraphノード: プランのワークアウトをGoogle Calendarに同期する。"""
+    if not state.plan:
+        return state
+
+    print("カレンダーにプランを同期中...")
+
+    if not CLIENT_SECRET_PATH.exists():
+        logger.info("client_secret.jsonが未配置のためカレンダー同期をスキップします")
+        return state
+
+    workouts_to_sync = [w for w in state.plan.workouts if w.workout_type != "rest"]
+    if not workouts_to_sync:
+        print("  同期対象のワークアウトがありません")
+        return state
+
+    try:
+        service = _get_calendar_service()
+
+        time_min = state.plan.week_start
+        time_max = max(w.date for w in state.plan.workouts) + timedelta(days=1)
+        deleted_count = _delete_run_coach_events(service, time_min, time_max)
+        if deleted_count:
+            print(f"  既存のイベント {deleted_count} 件を削除しました")
+
+        for workout in workouts_to_sync:
+            _create_workout_event(service, workout)
+
+        print(f"  {len(workouts_to_sync)} 件のワークアウトをカレンダーに登録しました")
+    except (HttpError, OSError, ValueError):
+        logger.warning("カレンダーへの同期に失敗しました", exc_info=True)
+
     return state
