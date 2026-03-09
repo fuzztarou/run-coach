@@ -7,7 +7,7 @@ from run_coach.calendar import fetch_calendar, sync_plan_to_calendar
 from run_coach.formatter import output_plan
 from run_coach.garmin import fetch_races, fetch_workouts
 from run_coach.plan_review import self_check
-from run_coach.planner import PLAN_REVIEW_MAX_RETRIES, generate_plan
+from run_coach import planner
 from run_coach.state import AgentState
 from run_coach.weather import fetch_weather
 
@@ -16,7 +16,7 @@ def _should_continue(state: AgentState) -> str:
     """self_check後のルーティング判定。"""
     if state.review_result == "ok":
         return "ok"
-    if state.review_retry_count > PLAN_REVIEW_MAX_RETRIES:
+    if state.review_retry_count > planner.PLAN_REVIEW_MAX_RETRIES:
         return "ok"
     return "ng"
 
@@ -29,7 +29,7 @@ def build_graph() -> StateGraph:
     graph.add_node("fetch_races", fetch_races)
     graph.add_node("fetch_calendar", fetch_calendar)
     graph.add_node("fetch_weather", fetch_weather)
-    graph.add_node("generate_plan", generate_plan)
+    graph.add_node("generate_plan", planner.generate_plan)
     graph.add_node("self_check", self_check)
     graph.add_node("output_plan", output_plan)
     graph.add_node("sync_calendar", sync_plan_to_calendar)
