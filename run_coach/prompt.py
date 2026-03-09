@@ -32,6 +32,21 @@ def get_llm_model() -> str:
     return os.environ.get("LLM_MODEL", DEFAULT_LLM_MODEL)
 
 
+# デバッグモード: set_debug() で設定される
+_debug: bool = False
+
+
+def set_debug(enabled: bool) -> None:
+    """デバッグ出力を有効/無効にする。"""
+    global _debug  # noqa: PLW0603
+    _debug = enabled
+
+
+def is_debug() -> bool:
+    """デバッグモードが有効かどうかを返す。"""
+    return _debug
+
+
 COACHING_RULES = """\
 1. 高強度セッション（tempo, intervals）は週2回まで
 2. ロング走の翌日は必ずイージーランまたは休養
