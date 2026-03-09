@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 
-from run_coach.prompt import COACHING_RULES, build_prompt, call_llm
+from run_coach.prompt import COACHING_RULES, build_prompt, call_llm, is_debug
 from run_coach.state import AgentState, Plan
 
 PLAN_REVIEW_MAX_RETRIES = 2
@@ -79,6 +79,9 @@ def generate_plan(state: AgentState) -> AgentState:
 
     data = json.loads(raw)
     state.plan = Plan(**data)
+    if is_debug():
+        print("\n[DEBUG] 生成されたプラン:")
+        print(state.plan.model_dump_json(indent=2))
     state.review_violations = []
     state.review_result = None
     return state

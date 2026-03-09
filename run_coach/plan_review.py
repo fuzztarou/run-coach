@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 
-from run_coach.prompt import COACHING_RULES, build_prompt, call_llm
+from run_coach.prompt import COACHING_RULES, build_prompt, call_llm, is_debug
 from run_coach.state import AgentState
 
 PLAN_REVIEW_SYSTEM_PROMPT = (
@@ -60,4 +60,10 @@ def review_plan(state: AgentState) -> AgentState:
 
     state.review_result = data.get("result", "ng")
     state.review_violations = data.get("violations", [])
+    if is_debug():
+        print(f"\n[DEBUG] レビュー結果: {state.review_result}")
+        if state.review_violations:
+            print("[DEBUG] 指摘事項:")
+            for violation in state.review_violations:
+                print(f"  - {violation}")
     return state

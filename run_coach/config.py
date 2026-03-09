@@ -9,9 +9,10 @@ from run_coach.state import UserProfile
 DEFAULT_CONFIG_PATH = Path("config/profile.yaml")
 DEFAULT_SETTINGS_PATH = Path("config/settings.yaml")
 
-DEFAULT_SETTINGS: dict[str, str | int] = {
+DEFAULT_SETTINGS: dict[str, str | int | bool] = {
     "llm_model": "gpt-4o-mini",
     "plan_review_max_retries": 2,
+    "debug": False,
 }
 
 
@@ -25,7 +26,7 @@ def load_profile(path: Path = DEFAULT_CONFIG_PATH) -> UserProfile:
     return UserProfile(**data)
 
 
-def load_settings(path: Path = DEFAULT_SETTINGS_PATH) -> dict[str, str | int]:
+def load_settings(path: Path = DEFAULT_SETTINGS_PATH) -> dict[str, str | int | bool]:
     """Load application settings from a YAML file.
 
     Returns default values if the file does not exist.
