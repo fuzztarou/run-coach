@@ -37,3 +37,13 @@ def load_settings(path: Path = DEFAULT_SETTINGS_PATH) -> dict[str, str | int | b
         if data:
             settings.update(data)
     return settings
+
+
+def apply_settings(settings: dict[str, str | int | bool]) -> None:
+    """設定値を各モジュールに反映する。"""
+    from run_coach.planner import set_plan_review_max_retries
+    from run_coach.prompt import set_debug, set_llm_model
+
+    set_llm_model(str(settings["llm_model"]))
+    set_plan_review_max_retries(int(settings["plan_review_max_retries"]))
+    set_debug(bool(settings.get("debug", False)))
