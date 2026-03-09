@@ -28,6 +28,7 @@ PLAN_*.md
 
 # User config (contains personal data)
 config/profile.yaml
+config/settings.yaml
 
 # Garmin tokens
 .garminconnect/

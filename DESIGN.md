@@ -512,6 +512,16 @@ export GARMIN_PASSWORD="..."
 export OPENAI_API_KEY="..."
 ```
 
+### アプリケーション設定: config/settings.yaml
+
+LLMモデル等のアプリケーション設定は `config/settings.yaml` で管理する。
+設定ファイルがない場合はデフォルト値（gpt-4o-mini）が使われる。
+
+```yaml
+llm_model: "gpt-4o-mini"  # OpenAI model name (e.g. gpt-4o, gpt-4o-mini, o3-mini)
+plan_review_max_retries: 2  # セルフチェックNGの場合の再生成回数上限
+```
+
 ```bash
 # 実行
 uv run python -m run_coach

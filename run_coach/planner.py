@@ -7,6 +7,13 @@ from run_coach.state import AgentState, Plan
 
 PLAN_REVIEW_MAX_RETRIES = 2
 
+
+def set_plan_review_max_retries(value: int) -> None:
+    """プランレビューの最大リトライ回数を設定する。"""
+    global PLAN_REVIEW_MAX_RETRIES  # noqa: PLW0603
+    PLAN_REVIEW_MAX_RETRIES = value
+
+
 PLANNER_SYSTEM_PROMPT = (
     "あなたは経験豊富なランニングコーチです。\n"
     "選手のプロフィール、最近のワークアウト履歴、レース予測タイム、\n"
