@@ -42,6 +42,9 @@ run-coach/
 │   └── formatter.py       # JSON → Markdown 変換
 ├── tests/                 # テスト
 ├── docs/                  # Phase毎の詳細設計
+├── config/                # 設定ファイル
+│   ├── settings.yaml      # アプリケーション設定（LLMモデル等）
+│   └── settings.example.yaml
 ├── DESIGN.md              # 全体設計書
 ├── pyproject.toml         # uv プロジェクト設定
 ├── .env.example           # 必要な環境変数の一覧

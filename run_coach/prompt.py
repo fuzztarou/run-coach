@@ -15,6 +15,23 @@ from run_coach.state import (
 # デフォルトのLLMモデル（環境変数 LLM_MODEL で上書き可能）
 DEFAULT_LLM_MODEL = "gpt-4o-mini"
 
+# モジュールレベル変数: set_llm_model() で設定される
+_llm_model: str | None = None
+
+
+def set_llm_model(model: str) -> None:
+    """Set the LLM model to use for all subsequent call_llm() calls."""
+    global _llm_model  # noqa: PLW0603
+    _llm_model = model
+
+
+def get_llm_model() -> str:
+    """Resolve the LLM model: module variable → env var → default."""
+    if _llm_model:
+        return _llm_model
+    return os.environ.get("LLM_MODEL", DEFAULT_LLM_MODEL)
+
+
 COACHING_RULES = """\
 1. 高強度セッション（tempo, intervals）は週2回まで
 2. ロング走の翌日は必ずイージーランまたは休養
@@ -38,7 +55,7 @@ def call_llm(prompt: str, system: str = "") -> str:
             messages.append({"role": "system", "content": system})
         messages.append({"role": "user", "content": prompt})
         response = client.chat.completions.create(  # type: ignore[call-overload]
-            model=os.environ.get("LLM_MODEL", DEFAULT_LLM_MODEL),
+            model=get_llm_model(),
             messages=messages,
             temperature=0.7,
             response_format={"type": "json_object"},
