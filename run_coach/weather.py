@@ -51,6 +51,7 @@ def _fetch_forecast(lat: float, lon: float) -> list[DailyWeather]:
 
 def fetch_weather(state: AgentState) -> AgentState:
     """Fetch weather forecast and populate state.constraints.weather."""
+    print("天気予報を取得中...")
     location = state.user_profile.location
     if location is None:
         logger.info("locationが未設定のため天気予報をスキップします")
@@ -62,4 +63,5 @@ def fetch_weather(state: AgentState) -> AgentState:
     except Exception:
         logger.warning("天気予報の取得に失敗しました", exc_info=True)
 
+    print(f"  {len(state.constraints.weather)} 日分の天気予報を取得しました")
     return state

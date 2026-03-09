@@ -95,6 +95,7 @@ def summarize_activity(activity: dict) -> WorkoutSummary | None:
 
 def fetch_workouts(state: AgentState) -> AgentState:
     """Fetch recent workouts from Garmin Connect and populate state.signals."""
+    print("Garmin Connect からデータを取得中...")
     client = _login()
 
     # get_activities() の戻り値は dict | list なので型を絞り込む
@@ -120,6 +121,7 @@ def fetch_workouts(state: AgentState) -> AgentState:
         recent_workouts=sorted(workouts, key=lambda w: w.date),
         race_predictions=race_predictions,
     )
+    print(f"  {len(state.signals.recent_workouts)} 件のワークアウトを取得しました")
     return state
 
 
@@ -154,6 +156,7 @@ def _fetch_race_detail(client: Garmin, event_id: int) -> RaceEvent | None:
 
 def fetch_races(state: AgentState) -> AgentState:
     """Fetch upcoming race events from Garmin Calendar and populate state.constraints.races."""
+    print("大会情報を取得中...")
     try:
         client = _login()
     except (GarminConnectAuthenticationError, OSError):
@@ -203,4 +206,5 @@ def fetch_races(state: AgentState) -> AgentState:
         races[0].is_primary = True
 
     state.constraints.races = races
+    print(f"  {len(state.constraints.races)} 件の大会を取得しました")
     return state
