@@ -13,6 +13,7 @@ DEFAULT_SETTINGS: dict[str, str | int | bool] = {
     "llm_model": "gpt-4o-mini",
     "plan_review_max_retries": 2,
     "debug": False,
+    "db_port": 5433,
 }
 
 

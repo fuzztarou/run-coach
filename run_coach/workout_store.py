@@ -6,7 +6,7 @@ import logging
 
 from run_coach.converters import pace_str_to_seconds
 from run_coach.database import (
-    get_connection,
+    get_engine,
     get_unsaved_activity_ids,
     save_splits,
     save_workout,
@@ -28,17 +28,17 @@ def _save_activity_splits(conn, workout_id: int, activity_id: str) -> int:
 
 
 def save_workouts(state: AgentState) -> AgentState:
-    """ワークアウトをSQLiteに保存する。
+    """ワークアウトをPostgreSQLに保存する。
 
     descriptionがあればパースしてrpe/pain/commentも一緒に保存する。
-    garmin_activity_idが重複する場合はスキップ（INSERT OR IGNORE）。
+    garmin_activity_idが重複する場合はスキップ（ON CONFLICT DO NOTHING）。
     """
     workouts = state.signals.recent_workouts
     if not workouts:
         return state
 
-    conn = get_connection()
-    try:
+    engine = get_engine()
+    with engine.connect() as conn:
         workouts_with_id = [w for w in workouts if w.garmin_activity_id]
 
         all_ids = [
@@ -78,8 +78,7 @@ def save_workouts(state: AgentState) -> AgentState:
             saved_count += 1
             splits_count += _save_activity_splits(conn, workout_id, activity_id)
 
-        print(f"  SQLite: {saved_count}件保存 ({splits_count}ラップ)")
-    finally:
-        conn.close()
+        conn.commit()
+        print(f"  DB: {saved_count}件保存 ({splits_count}ラップ)")
 
     return state
