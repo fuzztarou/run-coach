@@ -10,6 +10,7 @@ from run_coach.plan_review import self_check
 from run_coach import planner
 from run_coach.state import AgentState
 from run_coach.weather import fetch_weather
+from run_coach.workout_store import save_workouts
 
 
 def _should_continue(state: AgentState) -> str:
@@ -26,6 +27,7 @@ def build_graph() -> StateGraph:
     graph = StateGraph(AgentState)
 
     graph.add_node("fetch_workouts", fetch_workouts)
+    graph.add_node("save_workouts", save_workouts)
     graph.add_node("fetch_races", fetch_races)
     graph.add_node("fetch_calendar", fetch_calendar)
     graph.add_node("fetch_weather", fetch_weather)
@@ -35,7 +37,8 @@ def build_graph() -> StateGraph:
     graph.add_node("sync_calendar", sync_plan_to_calendar)
 
     graph.add_edge(START, "fetch_workouts")
-    graph.add_edge("fetch_workouts", "fetch_races")
+    graph.add_edge("fetch_workouts", "save_workouts")
+    graph.add_edge("save_workouts", "fetch_races")
     graph.add_edge("fetch_races", "fetch_calendar")
     graph.add_edge("fetch_calendar", "fetch_weather")
     graph.add_edge("fetch_weather", "generate_plan")

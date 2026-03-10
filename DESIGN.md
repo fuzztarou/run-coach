@@ -215,6 +215,10 @@ flowchart LR
         P4[+ SQLite蓄積<br>+ LLMログ<br>+ Decision/Outcome<br>+ Garmin振り返り取得]
     end
 
+    subgraph Phase45[Phase 4.5]
+        P45[+ workout_splits<br>+ 1km毎ラップ蓄積]
+    end
+
     subgraph Phase5[Phase 5]
         P5[+ RAG<br>+ ベクトル検索<br>+ 振り返りメモ活用]
     end
@@ -227,7 +231,7 @@ flowchart LR
         P7[+ LINE通知<br>+ 週次プラン配信<br>+ 振り返り対話]
     end
 
-    Phase1 --> Phase15 --> Phase2 --> Phase3 --> Phase35 --> Phase4 --> Phase5 --> Phase6 --> Phase7
+    Phase1 --> Phase15 --> Phase2 --> Phase3 --> Phase35 --> Phase4 --> Phase45 --> Phase5 --> Phase6 --> Phase7
 ```
 
 ### 本番構成 (Phase 6: Cloud Run + Phase 7: LINE)
@@ -266,6 +270,7 @@ flowchart TB
 | **3** | LangGraph: フロー制御移行 | [docs/phase3-langgraph.md](docs/phase3-langgraph.md) |
 | **3.5** | カレンダー同期: プランをGoogle Calendarに登録 | [docs/phase3.5-calendar-sync.md](docs/phase3.5-calendar-sync.md) |
 | **4** | データ蓄積: SQLite + Garmin振り返り + Decision/Outcome | [docs/phase4-data-logging.md](docs/phase4-data-logging.md) |
+| **4.5** | workout_splits: 1km毎のラップデータ蓄積 | [docs/phase4.5-workout-splits.md](docs/phase4.5-workout-splits.md) |
 | **5** | RAG: ベクトル検索で振り返り・知識活用 | [docs/phase5-rag.md](docs/phase5-rag.md) |
 | **6** | Cloud Run + Cloud Scheduler デプロイ | [docs/phase6-cloud-run.md](docs/phase6-cloud-run.md) |
 | **7** | LINE通知 + 振り返り対話 | [docs/phase7-line.md](docs/phase7-line.md) |
@@ -504,7 +509,7 @@ weather = client.get_activity_weather(activity_id)          # ワークアウト
   ↓
 CLI実行時にワークアウトと一緒にdescriptionを取得
   ↓
-SQLiteに保存（outcomes / RAG用）
+パースしてSQLiteに保存（rpe/pain/comment）
 ```
 
 ### Phase 7: LINE対話で取得（追加）
