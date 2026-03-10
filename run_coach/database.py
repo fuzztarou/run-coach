@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 from datetime import date, timedelta
 
-from sqlalchemy import Connection, Engine, create_engine, select, text, update
+from sqlalchemy import Connection, Engine, create_engine, select, text
 from sqlalchemy.dialects.postgresql import insert
 
 from run_coach.models import metadata, workout_splits, workouts
@@ -93,53 +93,37 @@ def create_tables(engine: Engine) -> None:
     metadata.create_all(engine)
 
 
-def save_workout(conn: Connection, workout_dict: dict) -> int | None:
-    """ワークアウトを保存する。garmin_activity_idが重複する場合は無視。
+def upsert_workouts(conn: Connection, workout_dicts: list[dict]) -> dict[str, int]:
+    """ワークアウトをバルクupsertで保存する。
+
+    garmin_activity_idが既存の場合はGarmin側の変更を反映（description修正等）。
+    date, workout_type, created_at は初回登録値を保持する。
 
     Returns:
-        挿入された行のID。重複スキップ時はNone。
+        {garmin_activity_id: workout_id} のマッピング。
     """
-    stmt = (
-        insert(workouts)
-        .values(**workout_dict)
-        .on_conflict_do_nothing(index_elements=["garmin_activity_id"])
-        .returning(workouts.c.id)
+    if not workout_dicts:
+        return {}
+    insert_stmt = insert(workouts).values(workout_dicts)
+    conflict_stmt = insert_stmt.on_conflict_do_update(
+        index_elements=["garmin_activity_id"],
+        set_={
+            "distance_km": insert_stmt.excluded.distance_km,
+            "duration_min": insert_stmt.excluded.duration_min,
+            "pace_seconds_per_km": insert_stmt.excluded.pace_seconds_per_km,
+            "avg_heart_rate_bpm": insert_stmt.excluded.avg_heart_rate_bpm,
+            "training_effect": insert_stmt.excluded.training_effect,
+            "description": insert_stmt.excluded.description,
+            "rpe": insert_stmt.excluded.rpe,
+            "pain": insert_stmt.excluded.pain,
+            "comment": insert_stmt.excluded.comment,
+        },
     )
-    result = conn.execute(stmt)
-    row = result.fetchone()
-    return row[0] if row else None
-
-
-def update_workout_feedback(
-    conn: Connection,
-    garmin_activity_id: str,
-    feedback_dict: dict,
-) -> None:
-    """振り返り情報（rpe/pain/comment）を更新する。"""
-    stmt = (
-        update(workouts)
-        .where(workouts.c.garmin_activity_id == garmin_activity_id)
-        .values(
-            rpe=feedback_dict.get("rpe"),
-            pain=feedback_dict.get("pain"),
-            comment=feedback_dict.get("comment"),
-        )
+    returning_stmt = conflict_stmt.returning(
+        workouts.c.id, workouts.c.garmin_activity_id
     )
-    conn.execute(stmt)
-
-
-def get_unsaved_activity_ids(
-    conn: Connection, garmin_activity_ids: list[str]
-) -> list[str]:
-    """渡されたIDのうち、まだDBに保存されていないものを返す。"""
-    if not garmin_activity_ids:
-        return []
-    stmt = select(workouts.c.garmin_activity_id).where(
-        workouts.c.garmin_activity_id.in_(garmin_activity_ids)
-    )
-    result = conn.execute(stmt)
-    saved_ids = {row[0] for row in result}
-    return [aid for aid in garmin_activity_ids if aid not in saved_ids]
+    rows = conn.execute(returning_stmt).fetchall()
+    return {row.garmin_activity_id: row.id for row in rows}
 
 
 def get_workout_history(
@@ -164,7 +148,7 @@ def get_workout_by_garmin_id(conn: Connection, garmin_activity_id: str) -> dict 
 
 
 def save_splits(conn: Connection, workout_id: int, splits: list[dict]) -> None:
-    """ラップデータをバルクインサートで一括保存する。重複はスキップ。"""
+    """ラップデータをupsertで一括保存する。既存データは最新値で更新。"""
     if not splits:
         return
     rows = [
@@ -180,12 +164,19 @@ def save_splits(conn: Connection, workout_id: int, splits: list[dict]) -> None:
         }
         for s in splits
     ]
-    stmt = (
-        insert(workout_splits)
-        .values(rows)
-        .on_conflict_do_nothing(constraint="workout_splits_workout_id_split_number_key")
+    insert_stmt = insert(workout_splits).values(rows)
+    upsert_stmt = insert_stmt.on_conflict_do_update(
+        constraint="workout_splits_workout_id_split_number_key",
+        set_={
+            "distance_km": insert_stmt.excluded.distance_km,
+            "duration_sec": insert_stmt.excluded.duration_sec,
+            "avg_pace": insert_stmt.excluded.avg_pace,
+            "avg_hr": insert_stmt.excluded.avg_hr,
+            "max_hr": insert_stmt.excluded.max_hr,
+            "elevation_gain": insert_stmt.excluded.elevation_gain,
+        },
     )
-    conn.execute(stmt)
+    conn.execute(upsert_stmt)
 
 
 def get_splits_by_workout_id(conn: Connection, workout_id: int) -> list[dict]:

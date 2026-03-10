@@ -28,10 +28,13 @@ def clean_db(_setup_tables):
     """save_workouts()ノードテスト用fixture。
 
     ノードが自前でcommitするため通常のrollback fixtureでは隔離できない。
-    teardownでTRUNCATEを必ず実行する。
+    setup/teardownでTRUNCATEを実行する。
     """
-    yield
     engine = get_engine()
+    with engine.connect() as conn:
+        conn.execute(text("TRUNCATE workout_splits, workouts CASCADE"))
+        conn.commit()
+    yield
     with engine.connect() as conn:
         conn.execute(text("TRUNCATE workout_splits, workouts CASCADE"))
         conn.commit()
