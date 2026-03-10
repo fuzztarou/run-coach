@@ -31,6 +31,21 @@ CREATE TABLE IF NOT EXISTS workouts (
 );
 """
 
+_CREATE_SPLITS_TABLE = """\
+CREATE TABLE IF NOT EXISTS workout_splits (
+    id              INTEGER PRIMARY KEY,
+    workout_id      INTEGER REFERENCES workouts(id),
+    split_number    INTEGER,              -- ラップ番号 (1始まり)
+    distance_km     REAL,                 -- ラップ距離 (km)
+    duration_sec    REAL,                 -- ラップタイム (秒)
+    avg_pace        TEXT,                 -- 平均ペース (例: "5:30")
+    avg_hr          INTEGER,              -- 平均心拍数 (bpm)
+    max_hr          INTEGER,              -- 最大心拍数 (bpm)
+    elevation_gain  REAL,                 -- 獲得標高 (m)
+    created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+"""
+
 _INSERT_WORKOUT = """\
 INSERT OR IGNORE INTO workouts (
     garmin_activity_id, date, workout_type, distance_km,
@@ -74,16 +89,33 @@ def get_connection(db_path: Path | None = None) -> sqlite3.Connection:
     return conn
 
 
+_INSERT_SPLIT = """\
+INSERT INTO workout_splits (
+    workout_id, split_number, distance_km,
+    duration_sec, avg_pace, avg_hr, max_hr, elevation_gain
+) VALUES (
+    :workout_id, :split_number, :distance_km,
+    :duration_sec, :avg_pace, :avg_hr, :max_hr, :elevation_gain
+);
+"""
+
+
 def init_db(conn: sqlite3.Connection) -> None:
     """テーブルを作成する（存在しなければ）。"""
     conn.execute(_CREATE_WORKOUTS_TABLE)
+    conn.execute(_CREATE_SPLITS_TABLE)
     conn.commit()
 
 
-def save_workout(conn: sqlite3.Connection, workout_dict: dict) -> None:
-    """ワークアウトを保存する。garmin_activity_idが重複する場合は無視（INSERT OR IGNORE）。"""
-    conn.execute(_INSERT_WORKOUT, workout_dict)
+def save_workout(conn: sqlite3.Connection, workout_dict: dict) -> int | None:
+    """ワークアウトを保存する。garmin_activity_idが重複する場合は無視（INSERT OR IGNORE）。
+
+    Returns:
+        挿入された行のID。重複スキップ時はNone。
+    """
+    cursor = conn.execute(_INSERT_WORKOUT, workout_dict)
     conn.commit()
+    return cursor.lastrowid if cursor.rowcount > 0 else None
 
 
 def update_workout_feedback(
@@ -110,7 +142,8 @@ def get_unsaved_activity_ids(
         return []
     placeholders = ",".join("?" for _ in garmin_activity_ids)
     cursor = conn.execute(
-        f"SELECT garmin_activity_id FROM workouts WHERE garmin_activity_id IN ({placeholders})",  # noqa: S608
+        f"SELECT garmin_activity_id FROM workouts "  # noqa: S608
+        f"WHERE garmin_activity_id IN ({placeholders})",
         garmin_activity_ids,
     )
     saved_ids = {row["garmin_activity_id"] for row in cursor}
@@ -139,3 +172,38 @@ def get_workout_by_garmin_id(
     )
     row = cursor.fetchone()
     return dict(row) if row else None
+
+
+def save_splits(conn: sqlite3.Connection, workout_id: int, splits: list[dict]) -> None:
+    """ラップデータをバルクインサートで一括保存する。既存データがあればスキップ。"""
+    cursor = conn.execute(
+        "SELECT COUNT(*) as cnt FROM workout_splits WHERE workout_id = ?",
+        (workout_id,),
+    )
+    if cursor.fetchone()["cnt"] > 0:
+        return
+
+    params_list = [
+        {
+            "workout_id": workout_id,
+            "split_number": split["split_number"],
+            "distance_km": split["distance_km"],
+            "duration_sec": split["duration_sec"],
+            "avg_pace": split["avg_pace"],
+            "avg_hr": split.get("avg_hr"),
+            "max_hr": split.get("max_hr"),
+            "elevation_gain": split.get("elevation_gain"),
+        }
+        for split in splits
+    ]
+    conn.executemany(_INSERT_SPLIT, params_list)
+    conn.commit()
+
+
+def get_splits_by_workout_id(conn: sqlite3.Connection, workout_id: int) -> list[dict]:
+    """workout_idに紐づくラップデータを取得する。"""
+    cursor = conn.execute(
+        "SELECT * FROM workout_splits WHERE workout_id = ? ORDER BY split_number",
+        (workout_id,),
+    )
+    return [dict(row) for row in cursor]

@@ -7,6 +7,7 @@ from pathlib import Path
 
 from garminconnect import Garmin, GarminConnectAuthenticationError  # type: ignore[import-untyped]
 
+from run_coach.converters import pace_seconds_to_str
 from run_coach.state import AgentState, RaceEvent, Signals, WorkoutSummary
 
 logger = logging.getLogger(__name__)
@@ -95,6 +96,53 @@ def summarize_activity(activity: dict) -> WorkoutSummary | None:
         garmin_activity_id=str(activity.get("activityId", "")),
         description=activity.get("description", ""),
     )
+
+
+def parse_splits(raw_splits: dict) -> list[dict]:
+    """Garmin splits APIレスポンスをパースし、ラップデータのリストに変換する。
+
+    Args:
+        raw_splits: client.get_activity_splits() の戻り値
+
+    Returns:
+        ラップごとの辞書リスト。各辞書は split_number, distance_km,
+        duration_sec, avg_pace, avg_hr, max_hr, elevation_gain を含む。
+    """
+    laps = raw_splits.get("lapDTOs", [])
+    result: list[dict] = []
+    for lap in laps:
+        distance_m = lap.get("distance", 0) or 0
+        duration_sec = lap.get("duration", 0) or 0
+        distance_km = round(distance_m / 1000, 3)
+        avg_pace = pace_seconds_to_str(duration_sec, distance_km)
+
+        result.append(
+            {
+                "split_number": lap.get("lapIndex", len(result) + 1),
+                "distance_km": distance_km,
+                "duration_sec": round(duration_sec, 1),
+                "avg_pace": avg_pace,
+                "avg_hr": int(lap["averageHR"]) if lap.get("averageHR") else None,
+                "max_hr": int(lap["maxHR"]) if lap.get("maxHR") else None,
+                "elevation_gain": lap.get("elevationGain"),
+            }
+        )
+    return result
+
+
+def fetch_activity_splits(activity_id: str) -> list[dict]:
+    """Garmin ConnectからアクティビティのラップデータをAPI取得してパースする。"""
+    client = _login()
+    try:
+        raw_splits = client.get_activity_splits(activity_id)
+        if not isinstance(raw_splits, dict):
+            return []
+        return parse_splits(raw_splits)
+    except (KeyError, TypeError, OSError):
+        logger.warning(
+            "ラップデータの取得に失敗: activity_id=%s", activity_id, exc_info=True
+        )
+        return []
 
 
 def fetch_workouts(state: AgentState) -> AgentState:
