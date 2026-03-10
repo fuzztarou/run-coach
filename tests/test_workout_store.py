@@ -93,13 +93,13 @@ def test_save_workouts_node(monkeypatch, clean_db):
         assert split_count[0] == 4  # 2ワークアウト × 2ラップ
 
 
-def test_save_workouts_skip_duplicate(monkeypatch, clean_db):
-    """既に保存済みのワークアウトはスキップされること。"""
+def test_save_workouts_upsert_no_duplicate(monkeypatch, clean_db):
+    """同一ワークアウトを2回保存してもレコード数は1件のままであること。"""
     monkeypatch.setattr("run_coach.workout_store.fetch_activity_splits", _mock_splits)
 
     state = _make_state("ACT001")
     save_workouts(state)
-    save_workouts(state)  # 2回目
+    save_workouts(state)  # 2回目（upsert）
 
     engine = get_engine()
     with engine.connect() as conn:
