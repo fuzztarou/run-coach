@@ -9,6 +9,25 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: run_coach_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/run_coach_test
+
     steps:
       - uses: actions/checkout@v4
 
@@ -22,6 +41,9 @@ jobs:
 
       - name: Format check
         run: uv run ruff format --check run_coach/ tests/
+
+      - name: Run migrations
+        run: uv run alembic upgrade head
 
       - name: Test
         run: uv run pytest tests/ -v

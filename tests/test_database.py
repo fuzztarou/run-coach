@@ -1,28 +1,14 @@
 from datetime import date, timedelta
 
-import pytest
-
 from run_coach.database import (
-    get_connection,
     get_splits_by_workout_id,
     get_unsaved_activity_ids,
     get_workout_by_garmin_id,
     get_workout_history,
-    init_db,
     save_splits,
     save_workout,
     update_workout_feedback,
 )
-
-
-@pytest.fixture()
-def db(tmp_path):
-    """テスト用のインメモリDBを返す。"""
-    db_path = tmp_path / "test.db"
-    conn = get_connection(db_path)
-    init_db(conn)
-    yield conn
-    conn.close()
 
 
 def _make_workout(**overrides) -> dict:
@@ -59,8 +45,10 @@ def test_no_duplicate_workout(db):
     """garmin_activity_id重複時にエラーにならないこと。"""
     save_workout(db, _make_workout())
     save_workout(db, _make_workout())  # 2回目
-    cursor = db.execute("SELECT count(*) as cnt FROM workouts")
-    assert cursor.fetchone()["cnt"] == 1
+    from sqlalchemy import text
+
+    row = db.execute(text("SELECT count(*) as cnt FROM workouts")).fetchone()
+    assert row[0] == 1
 
 
 def test_save_workout_with_feedback(db):

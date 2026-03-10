@@ -1,0 +1,21 @@
+# ローカル開発用 PostgreSQL
+# 接続URL: postgresql+psycopg://postgres:postgres@localhost:${DB_PORT:-5433}/run_coach
+services:
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: run_coach
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "${DB_PORT:-5433}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  postgres_data:
