@@ -4,10 +4,12 @@ import pytest
 
 from run_coach.database import (
     get_connection,
+    get_splits_by_workout_id,
     get_unsaved_activity_ids,
     get_workout_by_garmin_id,
     get_workout_history,
     init_db,
+    save_splits,
     save_workout,
     update_workout_feedback,
 )
@@ -114,3 +116,78 @@ def test_get_workout_history(db):
 def test_get_workout_by_garmin_id_not_found(db):
     """存在しないIDはNoneを返すこと。"""
     assert get_workout_by_garmin_id(db, "nonexistent") is None
+
+
+# --- workout_splits テスト ---
+
+
+def _make_splits(count: int = 3) -> list[dict]:
+    """テスト用のラップデータリストを生成する。"""
+    return [
+        {
+            "split_number": i + 1,
+            "distance_km": 1.0,
+            "duration_sec": 330.0 - i * 5,
+            "avg_pace": f"5:{30 - i * 5:02d}",
+            "avg_hr": 140 + i * 5,
+            "max_hr": 150 + i * 5,
+            "elevation_gain": 3.0 + i,
+        }
+        for i in range(count)
+    ]
+
+
+def test_save_and_get_splits(db):
+    """ラップデータの保存・取得ができること。"""
+    save_workout(db, _make_workout())
+    workout = get_workout_by_garmin_id(db, "123")
+    assert workout is not None
+
+    splits = _make_splits(2)
+    save_splits(db, workout["id"], splits)
+
+    result = get_splits_by_workout_id(db, workout["id"])
+    assert len(result) == 2
+    assert result[0]["split_number"] == 1
+    assert result[0]["avg_pace"] == "5:30"
+    assert result[0]["avg_hr"] == 140
+    assert result[1]["split_number"] == 2
+    assert result[1]["avg_pace"] == "5:25"
+
+
+def test_splits_no_duplicate(db):
+    """同一workout_idのsplitsを重複保存しないこと。"""
+    save_workout(db, _make_workout())
+    workout = get_workout_by_garmin_id(db, "123")
+    assert workout is not None
+
+    splits = _make_splits(2)
+    save_splits(db, workout["id"], splits)
+    save_splits(db, workout["id"], splits)  # 2回目はスキップされる
+
+    result = get_splits_by_workout_id(db, workout["id"])
+    assert len(result) == 2
+
+
+def test_splits_linked_to_workout(db):
+    """workout_idで正しく紐付けされること。"""
+    save_workout(db, _make_workout(garmin_activity_id="A1"))
+    save_workout(db, _make_workout(garmin_activity_id="A2"))
+
+    w1 = get_workout_by_garmin_id(db, "A1")
+    w2 = get_workout_by_garmin_id(db, "A2")
+    assert w1 is not None and w2 is not None
+
+    save_splits(db, w1["id"], _make_splits(3))
+    save_splits(db, w2["id"], _make_splits(1))
+
+    assert len(get_splits_by_workout_id(db, w1["id"])) == 3
+    assert len(get_splits_by_workout_id(db, w2["id"])) == 1
+
+
+def test_get_splits_empty(db):
+    """splitsがないworkoutは空リストを返すこと。"""
+    save_workout(db, _make_workout())
+    workout = get_workout_by_garmin_id(db, "123")
+    assert workout is not None
+    assert get_splits_by_workout_id(db, workout["id"]) == []
