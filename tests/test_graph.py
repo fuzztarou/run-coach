@@ -120,6 +120,7 @@ def test_graph_full_flow(monkeypatch):
         return state
 
     monkeypatch.setattr("run_coach.graph.fetch_workouts", noop)
+    monkeypatch.setattr("run_coach.graph.save_workouts", noop)
     monkeypatch.setattr("run_coach.graph.fetch_races", noop)
     monkeypatch.setattr("run_coach.graph.fetch_calendar", noop)
     monkeypatch.setattr("run_coach.graph.fetch_weather", noop)
@@ -160,6 +161,7 @@ def test_graph_retry_flow(monkeypatch):
         return state
 
     monkeypatch.setattr("run_coach.graph.fetch_workouts", noop)
+    monkeypatch.setattr("run_coach.graph.save_workouts", noop)
     monkeypatch.setattr("run_coach.graph.fetch_races", noop)
     monkeypatch.setattr("run_coach.graph.fetch_calendar", noop)
     monkeypatch.setattr("run_coach.graph.fetch_weather", noop)

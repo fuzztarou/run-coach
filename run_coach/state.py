@@ -41,6 +41,8 @@ class WorkoutSummary(BaseModel):
     avg_pace: str  # e.g. "5:30"
     avg_hr: int | None = None
     training_effect: float | None = None
+    garmin_activity_id: str | None = None
+    description: str | None = None
 
 
 class Signals(BaseModel):

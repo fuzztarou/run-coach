@@ -10,6 +10,7 @@ build/
 .venv/
 
 # Data
+data/
 *.db
 *.sqlite
 

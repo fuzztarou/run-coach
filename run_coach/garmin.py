@@ -89,7 +89,11 @@ def summarize_activity(activity: dict) -> WorkoutSummary | None:
         duration_min=round(duration_min, 1),
         avg_pace=avg_pace,
         avg_hr=activity.get("averageHR"),
-        training_effect=activity.get("aerobicTrainingEffect"),
+        training_effect=round(activity["aerobicTrainingEffect"], 2)
+        if activity.get("aerobicTrainingEffect")
+        else None,
+        garmin_activity_id=str(activity.get("activityId", "")),
+        description=activity.get("description", ""),
     )
 
 
