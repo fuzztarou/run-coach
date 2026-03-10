@@ -82,6 +82,8 @@ uv add --dev <package>
 ### 必須
 - **mainブランチに直接コミットしない。必ずブランチを切ってPRで統合する**
 - シークレットをハードコードしない（`.zprofile`の環境変数 / Secret Manager）
+- `.env` ファイルは使わない。環境変数はシェル設定ファイルで管理する
+- アプリケーション設定（ポート番号等）は `config/settings.yaml` で管理する
 - LLMに送るデータは最小限（位置情報・個人情報を除外）
 - Pydanticでstateスキーマを定義（型安全）
 - LLM出力は構造化JSON（文章ではなくPlan型に準拠）

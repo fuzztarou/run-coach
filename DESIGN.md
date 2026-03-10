@@ -222,15 +222,27 @@ flowchart LR
         P5[+ PostgreSQL移行<br>+ Supabase前提のDB構成]
     end
 
-    subgraph Phase6[Phase 6]
-        P6[+ Cloud Run<br>+ Cloud Scheduler<br>+ 自動実行]
+    subgraph Phase61[Phase 6.1]
+        P61[+ Dockerfile<br>+ FastAPI<br>+ Docker Compose]
+    end
+
+    subgraph Phase62[Phase 6.2]
+        P62[+ Cloud Run<br>+ Secret Manager<br>+ Supabase接続]
+    end
+
+    subgraph Phase63[Phase 6.3]
+        P63[+ Cloud Scheduler<br>+ IAM認証<br>+ 自動実行]
+    end
+
+    subgraph Phase64[Phase 6.4]
+        P64[+ Terraform<br>+ インフラコード化<br>+ 別リポジトリ]
     end
 
     subgraph Phase7[Phase 7]
         P7[+ LINE通知<br>+ 週次プラン配信<br>+ 振り返り対話]
     end
 
-    Phase1 --> Phase15 --> Phase2 --> Phase3 --> Phase35 --> Phase4 --> Phase45 --> Phase5 --> Phase6 --> Phase7
+    Phase1 --> Phase15 --> Phase2 --> Phase3 --> Phase35 --> Phase4 --> Phase45 --> Phase5 --> Phase61 --> Phase62 --> Phase63 --> Phase64 --> Phase7
 ```
 
 ### 本番構成 (Phase 6: Cloud Run + Phase 7: LINE)
@@ -270,7 +282,10 @@ flowchart TB
 | **4** | データ蓄積: SQLite + Garmin振り返り + Decision/Outcome | [docs/phase4-data-logging.md](docs/phase4-data-logging.md) |
 | **4.5** | workout_splits: 1km毎のラップデータ蓄積 | [docs/phase4.5-workout-splits.md](docs/phase4.5-workout-splits.md) |
 | **5** | PostgreSQL移行: ローカル/本番のDB構成を統一 | [docs/phase5-postgres.md](docs/phase5-postgres.md) |
-| **6** | Cloud Run + Cloud Scheduler デプロイ | [docs/phase6-cloud-run.md](docs/phase6-cloud-run.md) |
+| **6.1** | Dockerfile + ローカルDocker実行 | [docs/phase6.1-docker-local.md](docs/phase6.1-docker-local.md) |
+| **6.2** | Cloud Run デプロイ + Secret Manager | [docs/phase6.2-cloud-run-deploy.md](docs/phase6.2-cloud-run-deploy.md) |
+| **6.3** | Cloud Scheduler + 自動実行 | [docs/phase6.3-cloud-scheduler.md](docs/phase6.3-cloud-scheduler.md) |
+| **6.4** | Terraform インフラ管理（別リポジトリ） | [docs/phase6.4-terraform.md](docs/phase6.4-terraform.md) |
 | **7** | LINE通知 + 振り返り対話 | [docs/phase7-line.md](docs/phase7-line.md) |
 
 ## Stateスキーマ（Pydantic）
@@ -596,10 +611,11 @@ def summarize_activity(activity):
 ### おすすめの追加順
 
 ```
-Phase 3.5完了後（現在地）
-  → Phase 4: データ蓄積（SQLite + Garmin振り返り + Decision/Outcome）
-  → Phase 5: PostgreSQL移行（ローカル / 本番DB統一）
-  → Phase 6: Cloud Run（自動実行）
+Phase 5完了後（現在地）
+  → Phase 6.1: Dockerfile + ローカルDocker実行
+  → Phase 6.2: Cloud Run デプロイ + Secret Manager
+  → Phase 6.3: Cloud Scheduler + 自動実行
+  → Phase 6.4: Terraform インフラ管理（別リポジトリ）
   → Phase 7: LINE通知 + 振り返り対話
 ```
 
