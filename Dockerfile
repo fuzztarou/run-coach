@@ -18,6 +18,7 @@ COPY alembic.ini ./
 COPY config/settings.yaml config/settings.yaml
 COPY entrypoint.sh ./
 RUN chmod +x entrypoint.sh
-ENV PATH="/app/.venv/bin:$PATH"
+ENV PATH="/app/.venv/bin:$PATH" \
+    PYTHONUNBUFFERED=1
 EXPOSE 8080
 CMD ["./entrypoint.sh"]
