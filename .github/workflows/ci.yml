@@ -93,7 +93,7 @@ jobs:
           gcloud run deploy run-coach \
             --source . \
             --region asia-northeast1 \
-            --allow-unauthenticated=false \
+            --no-allow-unauthenticated \
             --service-account=run-coach-runner@${{ secrets.GCP_PROJECT_ID }}.iam.gserviceaccount.com \
             --set-secrets="GARMIN_EMAIL=GARMIN_EMAIL:latest,GARMIN_PASSWORD=GARMIN_PASSWORD:latest,OPENAI_API_KEY=OPENAI_API_KEY:latest,DATABASE_URL=DATABASE_URL:latest" \
             --set-env-vars="RUN_COACH_GCS_BUCKET=${{ vars.RUN_COACH_GCS_BUCKET }}" \
