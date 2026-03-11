@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import os
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
@@ -10,6 +11,7 @@ from google_auth_oauthlib.flow import InstalledAppFlow  # type: ignore[import-un
 from googleapiclient.discovery import Resource, build  # type: ignore[import-untyped]
 from googleapiclient.errors import HttpError  # type: ignore[import-untyped]
 
+from run_coach.cloud import is_cloud_run
 from run_coach.state import AgentState, CalendarSlot, WorkoutPlan
 
 logger = logging.getLogger(__name__)
@@ -21,8 +23,18 @@ TOKEN_PATH = RUN_COACH_DIR / "token.json"
 CLIENT_SECRET_PATH = RUN_COACH_DIR / "client_secret.json"
 
 
+def _get_calendar_id() -> str:
+    return os.environ.get("GOOGLE_CALENDAR_ID", "primary")
+
+
 def _get_calendar_service() -> Resource:
     """Authenticate and return a Google Calendar API service object."""
+    if is_cloud_run():
+        import google.auth  # type: ignore[import-untyped]
+
+        creds, _ = google.auth.default(scopes=SCOPES)
+        return build("calendar", "v3", credentials=creds)
+
     creds = None
     if TOKEN_PATH.exists():
         creds = Credentials.from_authorized_user_file(str(TOKEN_PATH), SCOPES)
@@ -48,7 +60,7 @@ def _fetch_events(service) -> dict[date, list[str]]:
     events_result = (
         service.events()
         .list(
-            calendarId="primary",
+            calendarId=_get_calendar_id(),
             timeMin=now.isoformat(),
             timeMax=time_max.isoformat(),
             singleEvents=True,
@@ -96,7 +108,7 @@ def _build_slots(events_by_date: dict[date, list[str]]) -> list[CalendarSlot]:
 def fetch_calendar(state: AgentState) -> AgentState:
     """Fetch Google Calendar events and populate state.constraints.available_slots."""
     print("カレンダーを取得中...")
-    if not CLIENT_SECRET_PATH.exists():
+    if not is_cloud_run() and not CLIENT_SECRET_PATH.exists():
         logger.info("client_secret.jsonが未配置のためカレンダー取得をスキップします")
         return state
 
@@ -139,7 +151,7 @@ def _delete_run_coach_events(service: Resource, time_min: date, time_max: date) 
     events_result = (
         service.events()
         .list(
-            calendarId="primary",
+            calendarId=_get_calendar_id(),
             timeMin=f"{time_min}T00:00:00Z",
             timeMax=f"{time_max}T00:00:00Z",
             privateExtendedProperty=f"{EXTENDED_PROPERTY_KEY}={EXTENDED_PROPERTY_VALUE}",
@@ -150,7 +162,9 @@ def _delete_run_coach_events(service: Resource, time_min: date, time_max: date) 
 
     deleted_count = 0
     for event in events_result.get("items", []):
-        service.events().delete(calendarId="primary", eventId=event["id"]).execute()
+        service.events().delete(
+            calendarId=_get_calendar_id(), eventId=event["id"]
+        ).execute()
         deleted_count += 1
 
     return deleted_count
@@ -189,7 +203,7 @@ def _build_event_body(workout: WorkoutPlan) -> dict:
 def _create_workout_event(service: Resource, workout: WorkoutPlan) -> None:
     """WorkoutPlanをGoogle Calendarにイベントとして作成する。"""
     body = _build_event_body(workout)
-    service.events().insert(calendarId="primary", body=body).execute()
+    service.events().insert(calendarId=_get_calendar_id(), body=body).execute()
 
 
 def sync_plan_to_calendar(state: AgentState) -> AgentState:
@@ -199,7 +213,7 @@ def sync_plan_to_calendar(state: AgentState) -> AgentState:
 
     print("カレンダーにプランを同期中...")
 
-    if not CLIENT_SECRET_PATH.exists():
+    if not is_cloud_run() and not CLIENT_SECRET_PATH.exists():
         logger.info("client_secret.jsonが未配置のためカレンダー同期をスキップします")
         return state
 

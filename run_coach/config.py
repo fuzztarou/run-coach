@@ -48,3 +48,15 @@ def apply_settings(settings: dict[str, str | int | bool]) -> None:
     set_llm_model(str(settings["llm_model"]))
     set_plan_review_max_retries(int(settings["plan_review_max_retries"]))
     set_debug(bool(settings.get("debug", False)))
+
+
+def ensure_profile() -> None:
+    """Cloud Run環境でGCSからprofile.yamlをダウンロードする。"""
+    import os
+
+    from run_coach.gcs import download_file
+
+    bucket = os.environ.get("RUN_COACH_GCS_BUCKET", "")
+    if not bucket:
+        return
+    download_file(bucket, "config/profile.yaml", str(DEFAULT_CONFIG_PATH))
