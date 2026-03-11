@@ -1,0 +1,112 @@
+name: CD
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "run_coach/**"
+      - "alembic/**"
+      - "config/**"
+      - "Dockerfile"
+      - "pyproject.toml"
+      - "uv.lock"
+      - ".github/workflows/cd.yml"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: run_coach_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: ${{ secrets.TEST_POSTGRES_PASSWORD }}
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql+psycopg://postgres:${{ secrets.TEST_POSTGRES_PASSWORD }}@localhost:5432/run_coach_test
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Lint
+        run: uv run ruff check run_coach/ tests/
+
+      - name: Format check
+        run: uv run ruff format --check run_coach/ tests/
+
+      - name: Run migrations
+        run: uv run alembic upgrade head
+
+      - name: Test
+        run: uv run pytest tests/ -v
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write  # Workload Identity Federation
+
+    env:
+      REGION: asia-northeast1
+      IMAGE: asia-northeast1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/run-coach/run-coach
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
+          token_format: access_token
+
+      - uses: docker/login-action@v3
+        with:
+          registry: asia-northeast1-docker.pkg.dev
+          username: oauth2accesstoken
+          password: ${{ steps.auth.outputs.access_token }}
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ env.IMAGE }}:${{ github.sha }},${{ env.IMAGE }}:latest
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - uses: astral-sh/setup-uv@v5
+
+      - name: Install dependencies
+        run: uv sync --frozen --no-dev
+
+      - name: Run migrations
+        run: uv run alembic upgrade head
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+      - name: Deploy to Cloud Run
+        run: |
+          gcloud run deploy run-coach \
+            --image=${{ env.IMAGE }}:${{ github.sha }} \
+            --region=${{ env.REGION }} \
+            --no-allow-unauthenticated \
+            --service-account=run-coach-runner@${{ secrets.GCP_PROJECT_ID }}.iam.gserviceaccount.com \
+            --set-secrets="GARMIN_EMAIL=GARMIN_EMAIL:latest,GARMIN_PASSWORD=GARMIN_PASSWORD:latest,OPENAI_API_KEY=OPENAI_API_KEY:latest,DATABASE_URL=DATABASE_URL:latest" \
+            --set-env-vars="RUN_COACH_GCS_BUCKET=${{ vars.RUN_COACH_GCS_BUCKET }}" \
+            --memory=512Mi \
+            --timeout=300
