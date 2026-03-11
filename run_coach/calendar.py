@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import os
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
@@ -21,13 +22,9 @@ RUN_COACH_DIR = Path.home() / ".run-coach"
 TOKEN_PATH = RUN_COACH_DIR / "token.json"
 CLIENT_SECRET_PATH = RUN_COACH_DIR / "client_secret.json"
 
-_calendar_id: str = "primary"
 
-
-def set_calendar_id(calendar_id: str) -> None:
-    """使用するカレンダーIDを設定する。"""
-    global _calendar_id
-    _calendar_id = calendar_id
+def _get_calendar_id() -> str:
+    return os.environ.get("GOOGLE_CALENDAR_ID", "primary")
 
 
 def _get_calendar_service() -> Resource:
@@ -63,7 +60,7 @@ def _fetch_events(service) -> dict[date, list[str]]:
     events_result = (
         service.events()
         .list(
-            calendarId=_calendar_id,
+            calendarId=_get_calendar_id(),
             timeMin=now.isoformat(),
             timeMax=time_max.isoformat(),
             singleEvents=True,
@@ -154,7 +151,7 @@ def _delete_run_coach_events(service: Resource, time_min: date, time_max: date) 
     events_result = (
         service.events()
         .list(
-            calendarId=_calendar_id,
+            calendarId=_get_calendar_id(),
             timeMin=f"{time_min}T00:00:00Z",
             timeMax=f"{time_max}T00:00:00Z",
             privateExtendedProperty=f"{EXTENDED_PROPERTY_KEY}={EXTENDED_PROPERTY_VALUE}",
@@ -165,7 +162,9 @@ def _delete_run_coach_events(service: Resource, time_min: date, time_max: date) 
 
     deleted_count = 0
     for event in events_result.get("items", []):
-        service.events().delete(calendarId=_calendar_id, eventId=event["id"]).execute()
+        service.events().delete(
+            calendarId=_get_calendar_id(), eventId=event["id"]
+        ).execute()
         deleted_count += 1
 
     return deleted_count
@@ -204,7 +203,7 @@ def _build_event_body(workout: WorkoutPlan) -> dict:
 def _create_workout_event(service: Resource, workout: WorkoutPlan) -> None:
     """WorkoutPlanをGoogle Calendarにイベントとして作成する。"""
     body = _build_event_body(workout)
-    service.events().insert(calendarId=_calendar_id, body=body).execute()
+    service.events().insert(calendarId=_get_calendar_id(), body=body).execute()
 
 
 def sync_plan_to_calendar(state: AgentState) -> AgentState:

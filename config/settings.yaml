@@ -3,4 +3,3 @@ plan_review_max_retries: 1  # セルフチェックNGの場合の再生成回数
 debug: false  # trueでLLM生成プラン・レビュー結果を出力
 db_port: 5433  # PostgreSQLホスト側ポート（コンテナ内部は常に5432）
 app_port: 8081  # FastAPIホスト側ポート（コンテナ内部は常に8080）
-calendar_id: "primary"  # Google Calendar ID（Cloud Runでは共有カレンダーIDを設定）

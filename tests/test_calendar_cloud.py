@@ -2,18 +2,23 @@
 
 from unittest.mock import MagicMock, patch
 
-from run_coach.calendar import set_calendar_id
+
+def test_get_calendar_id_from_env():
+    """環境変数 GOOGLE_CALENDAR_ID でカレンダーIDが設定されること。"""
+    with patch.dict(
+        "os.environ", {"GOOGLE_CALENDAR_ID": "test@group.calendar.google.com"}
+    ):
+        from run_coach.calendar import _get_calendar_id
+
+        assert _get_calendar_id() == "test@group.calendar.google.com"
 
 
-def test_set_calendar_id():
-    """set_calendar_id でカレンダーIDが変更されること。"""
-    import run_coach.calendar as cal
+def test_get_calendar_id_default():
+    """環境変数未設定時はprimaryが返ること。"""
+    with patch.dict("os.environ", {}, clear=True):
+        from run_coach.calendar import _get_calendar_id
 
-    original = cal._calendar_id
-    set_calendar_id("test@group.calendar.google.com")
-    assert cal._calendar_id == "test@group.calendar.google.com"
-    # 元に戻す
-    set_calendar_id(original)
+        assert _get_calendar_id() == "primary"
 
 
 @patch("run_coach.calendar.build")
