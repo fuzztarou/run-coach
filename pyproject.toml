@@ -14,13 +14,16 @@ dependencies = [
     "psycopg[binary]>=3.1",
     "pyyaml>=6.0.3",
     "sqlalchemy>=2.0",
+    "fastapi>=0.135.1",
+    "uvicorn[standard]>=0.41.0",
+    "alembic>=1.18.4",
 ]
 
 [dependency-groups]
 dev = [
+    "httpx>=0.28.1",
     "pre-commit>=4.5.1",
     "pytest>=9.0.2",
-    "alembic>=1.15",
     "ruff>=0.15.5",
     "types-pyyaml>=6.0.12.20250915",
 ]

@@ -1,5 +1,5 @@
-# ローカル開発用 PostgreSQL
-# 接続URL: postgresql+psycopg://postgres:postgres@localhost:${DB_PORT:-5433}/run_coach
+# ローカル開発用 PostgreSQL + FastAPI
+# DB接続URL: postgresql+psycopg://postgres:postgres@localhost:${DB_PORT:-5433}/run_coach
 services:
   postgres:
     image: postgres:17
@@ -16,6 +16,25 @@ services:
       interval: 5s
       timeout: 3s
       retries: 5
+
+  app:
+    build: .
+    ports:
+      - "${APP_PORT:-8080}:8080"
+    environment:
+      - DATABASE_URL=postgresql+psycopg://postgres:postgres@postgres:5432/run_coach
+      - GARMIN_EMAIL=${GARMIN_EMAIL}
+      - GARMIN_PASSWORD=${GARMIN_PASSWORD}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - GOOGLE_CALENDAR_ID=${GOOGLE_CALENDAR_ID}
+    volumes:
+      - ./config/profile.yaml:/app/config/profile.yaml:ro
+      - ./config/settings.yaml:/app/config/settings.yaml:ro
+      - ${HOME}/.garminconnect:/root/.garminconnect
+      - ${HOME}/.run-coach:/root/.run-coach
+    depends_on:
+      postgres:
+        condition: service_healthy
 
 volumes:
   postgres_data:
