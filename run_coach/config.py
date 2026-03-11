@@ -14,6 +14,7 @@ DEFAULT_SETTINGS: dict[str, str | int | bool] = {
     "plan_review_max_retries": 2,
     "debug": False,
     "db_port": 5433,
+    "calendar_id": "primary",
 }
 
 
@@ -42,9 +43,23 @@ def load_settings(path: Path = DEFAULT_SETTINGS_PATH) -> dict[str, str | int | b
 
 def apply_settings(settings: dict[str, str | int | bool]) -> None:
     """設定値を各モジュールに反映する。"""
+    from run_coach.calendar import set_calendar_id
     from run_coach.planner import set_plan_review_max_retries
     from run_coach.prompt import set_debug, set_llm_model
 
     set_llm_model(str(settings["llm_model"]))
     set_plan_review_max_retries(int(settings["plan_review_max_retries"]))
     set_debug(bool(settings.get("debug", False)))
+    set_calendar_id(str(settings.get("calendar_id", "primary")))
+
+
+def ensure_profile() -> None:
+    """Cloud Run環境でGCSからprofile.yamlをダウンロードする。"""
+    import os
+
+    from run_coach.gcs import download_file
+
+    bucket = os.environ.get("RUN_COACH_GCS_BUCKET", "")
+    if not bucket:
+        return
+    download_file(bucket, "config/profile.yaml", str(DEFAULT_CONFIG_PATH))

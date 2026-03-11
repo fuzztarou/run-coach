@@ -1,7 +1,7 @@
 .PHONY: help up down build logs ps restart \
        db-up db-down db-logs db-psql \
        migrate migrate-history migrate-new migrate-down \
-       local-coach
+       local-coach upload-profile
 
 APP_PORT := $(shell grep '^app_port:' config/settings.yaml 2>/dev/null | awk '{print $$2}')
 APP_PORT := $(or $(APP_PORT),8080)
@@ -62,3 +62,10 @@ migrate-down: ## 1つ前にロールバック
 
 local-coach: ## プラン生成 (JSON整形出力)
 	@curl -s -X POST http://localhost:$(APP_PORT)/coach | jq .
+
+# ── GCS ─────────────────────────────────────────────
+
+upload-profile: ## profile.yaml を GCS にアップロード（要: RUN_COACH_GCS_BUCKET 環境変数）
+	@test -n "$(RUN_COACH_GCS_BUCKET)" || (echo "Error: RUN_COACH_GCS_BUCKET 環境変数が未設定です" && exit 1)
+	gsutil cp config/profile.yaml gs://$(RUN_COACH_GCS_BUCKET)/config/profile.yaml
+	@echo "アップロード完了: gs://$(RUN_COACH_GCS_BUCKET)/config/profile.yaml"

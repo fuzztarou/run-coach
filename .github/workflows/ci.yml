@@ -1,4 +1,4 @@
-name: CI
+name: CI/CD
 
 on:
   push:
@@ -58,3 +58,43 @@ jobs:
       - uses: gitleaks/gitleaks-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  deploy:
+    needs: [test, gitleaks]
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write  # Workload Identity Federation
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - uses: astral-sh/setup-uv@v5
+
+      - name: Install dependencies
+        run: uv sync --frozen --no-dev
+
+      - name: Run migrations
+        run: uv run alembic upgrade head
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+      - name: Deploy to Cloud Run
+        run: |
+          gcloud run deploy run-coach \
+            --source . \
+            --region asia-northeast1 \
+            --allow-unauthenticated=false \
+            --set-secrets="GARMIN_EMAIL=GARMIN_EMAIL:latest,GARMIN_PASSWORD=GARMIN_PASSWORD:latest,OPENAI_API_KEY=OPENAI_API_KEY:latest,DATABASE_URL=DATABASE_URL:latest" \
+            --set-env-vars="RUN_COACH_GCS_BUCKET=${{ vars.RUN_COACH_GCS_BUCKET }}" \
+            --memory=512Mi \
+            --timeout=300

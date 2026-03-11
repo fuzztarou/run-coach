@@ -15,7 +15,7 @@ COPY --from=builder /app/.venv /app/.venv
 COPY run_coach/ run_coach/
 COPY alembic/ alembic/
 COPY alembic.ini ./
-COPY config/settings.example.yaml config/settings.yaml
+COPY config/settings.yaml config/settings.yaml
 COPY entrypoint.sh ./
 RUN chmod +x entrypoint.sh
 ENV PATH="/app/.venv/bin:$PATH"

@@ -7,13 +7,16 @@ from pathlib import Path
 
 from garminconnect import Garmin, GarminConnectAuthenticationError  # type: ignore[import-untyped]
 
+from run_coach.cloud import is_cloud_run
 from run_coach.converters import pace_seconds_to_str
 from run_coach.state import AgentState, RaceEvent, Signals, WorkoutSummary
 
 logger = logging.getLogger(__name__)
 
-# トークン保存先
-TOKENSTORE = str(Path.home() / ".garminconnect")
+# トークン保存先（Cloud Runでは /tmp 配下を使用）
+GARMIN_TOKENSTORE_LOCAL = str(Path.home() / ".garminconnect")
+GARMIN_TOKENSTORE_CLOUD = "/tmp/.garminconnect"
+GCS_GARMIN_TOKEN_PREFIX = "garmin-tokens"
 # 一度に取得するアクティビティの最大件数
 ACTIVITY_FETCH_LIMIT = 10
 # ワークアウト履歴の取得対象期間（日数）
@@ -35,6 +38,36 @@ TARGET_ACTIVITY_TYPES = (
 # fetch_workouts / fetch_races で共有するクライアントキャッシュ。
 # _login() を複数回呼んでも実際のログインは初回のみ。
 _garmin_client: Garmin | None = None
+# GCSバケット名（prefetch_tokens で設定される）
+_gcs_bucket: str = ""
+
+
+def _get_tokenstore() -> str:
+    """環境に応じたトークン保存先パスを返す。"""
+    return GARMIN_TOKENSTORE_CLOUD if is_cloud_run() else GARMIN_TOKENSTORE_LOCAL
+
+
+def prefetch_tokens() -> None:
+    """GCSからGarminトークンをダウンロードする。Cloud Run起動時に呼ぶ。"""
+    global _gcs_bucket
+    bucket = os.environ.get("RUN_COACH_GCS_BUCKET", "")
+    if not bucket:
+        return
+    _gcs_bucket = bucket
+    from run_coach.gcs import download_directory
+
+    tokenstore = _get_tokenstore()
+    download_directory(bucket, GCS_GARMIN_TOKEN_PREFIX, tokenstore)
+
+
+def _upload_tokens_to_gcs() -> None:
+    """認証後のトークンをGCSに書き戻す。"""
+    if not _gcs_bucket:
+        return
+    from run_coach.gcs import upload_directory
+
+    tokenstore = _get_tokenstore()
+    upload_directory(_gcs_bucket, tokenstore, GCS_GARMIN_TOKEN_PREFIX)
 
 
 def _login() -> Garmin:
@@ -43,17 +76,22 @@ def _login() -> Garmin:
     if _garmin_client is not None:
         return _garmin_client
 
+    tokenstore = _get_tokenstore()
     email = os.environ.get("GARMIN_EMAIL", "")
     password = os.environ.get("GARMIN_PASSWORD", "")
     client = Garmin(email=email, password=password)
     try:
-        client.login(tokenstore=TOKENSTORE)
+        client.login(tokenstore=tokenstore)
     except (FileNotFoundError, GarminConnectAuthenticationError):
         logger.info("トークンが無効または未保存のため、クレデンシャルでログインします")
         client.login()
 
     # リフレッシュ済みトークンを含め毎回保存（次回セッションで再利用）
-    client.garth.dump(TOKENSTORE)
+    client.garth.dump(tokenstore)
+
+    # Cloud RunではGCSにも書き戻す
+    if is_cloud_run():
+        _upload_tokens_to_gcs()
 
     _garmin_client = client
     return client
