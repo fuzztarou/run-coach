@@ -69,7 +69,7 @@ jobs:
 
     env:
       REGION: asia-northeast1
-      IMAGE: asia-northeast1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/cloud-run-source-deploy/run-coach
+      IMAGE: asia-northeast1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/run-coach/run-coach
 
     steps:
       - uses: actions/checkout@v4
