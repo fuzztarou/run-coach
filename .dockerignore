@@ -1,0 +1,12 @@
+.venv/
+__pycache__/
+*.pyc
+.git/
+.github/
+tests/
+docs/
+*.db
+*.sqlite
+.claude/
+PLAN_*.md
+DESIGN.md

@@ -13,7 +13,7 @@
 | 1. 調査 | DESIGN.md・docs/を確認、不明点を質問 |
 | 2. Plan | planモードで実装計画、ユーザー承認を得る |
 | 3. 実装 | コード実装 |
-| 4. テスト | pytest実行 |
+| 4. テスト | pytest実行 + `make` で動作確認 |
 | 5. Review | コードレビュー |
 
 ## 実装前ルール（必須）
@@ -75,6 +75,12 @@ uv run ruff format src/ tests/
 # 依存追加
 uv add <package>
 uv add --dev <package>
+
+# Docker / API 動作確認（Makefile）
+make help          # コマンド一覧
+make up            # app + db 起動
+make local-coach     # プラン生成の動作確認（JSON整形出力）
+make down          # 停止
 ```
 
 ## ルール
