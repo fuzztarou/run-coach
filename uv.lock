@@ -1609,6 +1609,7 @@ dependencies = [
     { name = "pydantic" },
     { name = "pyyaml" },
     { name = "sqlalchemy" },
+    { name = "tenacity" },
     { name = "uvicorn", extra = ["standard"] },
 ]
 
@@ -1637,6 +1638,7 @@ requires-dist = [
     { name = "pydantic", specifier = ">=2.12.5" },
     { name = "pyyaml", specifier = ">=6.0.3" },
     { name = "sqlalchemy", specifier = ">=2.0" },
+    { name = "tenacity", specifier = ">=9.1.4" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.41.0" },
 ]
 

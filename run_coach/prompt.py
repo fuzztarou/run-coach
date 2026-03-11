@@ -4,6 +4,7 @@ import os
 from datetime import date, timedelta
 
 from openai import OpenAI
+from tenacity import retry, stop_after_attempt, wait_fixed
 
 from run_coach.state import (
     AgentState,
@@ -58,6 +59,15 @@ COACHING_RULES = """\
 8. 週間ワークアウト回数は選手の設定した上限（runs_per_week.max）を超えないこと"""
 
 
+LLM_RETRY_ATTEMPTS = 3
+LLM_RETRY_WAIT_SECONDS = 5
+
+
+@retry(
+    stop=stop_after_attempt(LLM_RETRY_ATTEMPTS),
+    wait=wait_fixed(LLM_RETRY_WAIT_SECONDS),
+    reraise=True,
+)
 def call_llm(prompt: str, system: str = "") -> str:
     """Call LLM with a prompt. Abstracted for future provider switching."""
     provider = os.environ.get("LLM_PROVIDER", "openai")
