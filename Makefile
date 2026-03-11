@@ -1,7 +1,8 @@
 .PHONY: help up down build logs ps restart \
        db-up db-down db-logs db-psql \
        migrate migrate-history migrate-new migrate-down \
-       local-coach upload-profile
+       local-coach cloud-coach upload-profile \
+       gcp-set-project
 
 APP_PORT := $(shell grep '^app_port:' config/settings.yaml 2>/dev/null | awk '{print $$2}')
 APP_PORT := $(or $(APP_PORT),8080)
@@ -60,8 +61,20 @@ migrate-down: ## 1つ前にロールバック
 
 # ── API ─────────────────────────────────────────────
 
-local-coach: ## プラン生成 (JSON整形出力)
+local-coach: ## プラン生成 - ローカル (JSON整形出力)
 	@curl -s -X POST http://localhost:$(APP_PORT)/coach | jq .
+
+cloud-coach: ## プラン生成 - Cloud Run (JSON整形出力)
+	@CLOUD_RUN_URL=$$(gcloud run services describe run-coach --region=asia-northeast1 --format='value(status.url)') && \
+	TOKEN=$$(gcloud auth print-identity-token) && \
+	curl -s -X POST "$$CLOUD_RUN_URL/coach" -H "Authorization: Bearer $$TOKEN" | jq .
+
+# ── GCP ─────────────────────────────────────────────
+
+gcp-set-project: ## GCPプロジェクトを切り替え（要: RUN_COACH_GCP_PROJECT_ID 環境変数）
+	@test -n "$(RUN_COACH_GCP_PROJECT_ID)" || (echo "Error: RUN_COACH_GCP_PROJECT_ID 環境変数が未設定です" && exit 1)
+	gcloud config set project $(RUN_COACH_GCP_PROJECT_ID)
+	@echo "プロジェクトを $(RUN_COACH_GCP_PROJECT_ID) に切り替えました"
 
 # ── GCS ─────────────────────────────────────────────
 
