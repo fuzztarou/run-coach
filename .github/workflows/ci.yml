@@ -12,19 +12,19 @@ jobs:
       postgres:
         image: postgres:17
         env:
-          POSTGRES_DB: run_coach_test
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: ${{ secrets.TEST_POSTGRES_DB }}
+          POSTGRES_USER: ${{ secrets.TEST_POSTGRES_USER }}
+          POSTGRES_PASSWORD: ${{ secrets.TEST_POSTGRES_PASSWORD }}
         ports:
           - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U postgres"
+          --health-cmd "pg_isready -U ${{ secrets.TEST_POSTGRES_USER }}"
           --health-interval 5s
           --health-timeout 3s
           --health-retries 5
 
     env:
-      DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/run_coach_test
+      DATABASE_URL: postgresql+psycopg://${{ secrets.TEST_POSTGRES_USER }}:${{ secrets.TEST_POSTGRES_PASSWORD }}@localhost:5432/${{ secrets.TEST_POSTGRES_DB }}
 
     steps:
       - uses: actions/checkout@v4
