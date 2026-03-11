@@ -67,6 +67,10 @@ jobs:
       contents: read
       id-token: write  # Workload Identity Federation
 
+    env:
+      REGION: asia-northeast1
+      IMAGE: asia-northeast1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/run-coach/run-coach
+
     steps:
       - uses: actions/checkout@v4
 
@@ -75,6 +79,19 @@ jobs:
         with:
           workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
           service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
+          token_format: access_token
+
+      - uses: docker/login-action@v3
+        with:
+          registry: asia-northeast1-docker.pkg.dev
+          username: oauth2accesstoken
+          password: ${{ steps.auth.outputs.access_token }}
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ env.IMAGE }}:${{ github.sha }},${{ env.IMAGE }}:latest
 
       - uses: google-github-actions/setup-gcloud@v2
 
@@ -91,8 +108,8 @@ jobs:
       - name: Deploy to Cloud Run
         run: |
           gcloud run deploy run-coach \
-            --source . \
-            --region asia-northeast1 \
+            --image=${{ env.IMAGE }}:${{ github.sha }} \
+            --region=${{ env.REGION }} \
             --no-allow-unauthenticated \
             --service-account=run-coach-runner@${{ secrets.GCP_PROJECT_ID }}.iam.gserviceaccount.com \
             --set-secrets="GARMIN_EMAIL=GARMIN_EMAIL:latest,GARMIN_PASSWORD=GARMIN_PASSWORD:latest,OPENAI_API_KEY=OPENAI_API_KEY:latest,DATABASE_URL=DATABASE_URL:latest" \
