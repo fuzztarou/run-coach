@@ -127,6 +127,7 @@ def test_graph_full_flow(monkeypatch):
     monkeypatch.setattr("run_coach.planner.generate_plan", mock_generate_plan)
     monkeypatch.setattr("run_coach.graph.self_check", mock_self_check)
     monkeypatch.setattr("run_coach.graph.output_plan", noop)
+    monkeypatch.setattr("run_coach.graph.notify_line", noop)
 
     app = compile_graph()
     result = app.invoke(_make_state())
@@ -168,6 +169,7 @@ def test_graph_retry_flow(monkeypatch):
     monkeypatch.setattr("run_coach.planner.generate_plan", mock_generate_plan)
     monkeypatch.setattr("run_coach.graph.self_check", mock_self_check)
     monkeypatch.setattr("run_coach.graph.output_plan", noop)
+    monkeypatch.setattr("run_coach.graph.notify_line", noop)
 
     app = compile_graph()
     result = app.invoke(_make_state())
