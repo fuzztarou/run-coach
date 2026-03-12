@@ -6,6 +6,7 @@ from langgraph.graph.state import CompiledStateGraph
 from run_coach.calendar import fetch_calendar, sync_plan_to_calendar
 from run_coach.formatter import output_plan
 from run_coach.garmin import fetch_races, fetch_workouts
+from run_coach.line import notify_line
 from run_coach.plan_review import self_check
 from run_coach import planner
 from run_coach.state import AgentState
@@ -35,6 +36,7 @@ def build_graph() -> StateGraph:
     graph.add_node("self_check", self_check)
     graph.add_node("output_plan", output_plan)
     graph.add_node("sync_calendar", sync_plan_to_calendar)
+    graph.add_node("notify_line", notify_line)
 
     graph.add_edge(START, "fetch_workouts")
     graph.add_edge("fetch_workouts", "save_workouts")
@@ -49,7 +51,8 @@ def build_graph() -> StateGraph:
         {"ok": "output_plan", "ng": "generate_plan"},
     )
     graph.add_edge("output_plan", "sync_calendar")
-    graph.add_edge("sync_calendar", END)
+    graph.add_edge("sync_calendar", "notify_line")
+    graph.add_edge("notify_line", END)
 
     return graph
 

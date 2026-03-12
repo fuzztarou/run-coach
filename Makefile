@@ -3,7 +3,8 @@
        migrate migrate-history migrate-new migrate-down \
        local-coach cloud-coach upload-profile \
        gcp-set-project \
-       scheduler-create scheduler-delete scheduler-run scheduler-describe
+       scheduler-create scheduler-delete scheduler-run scheduler-describe \
+       line-test-message
 
 APP_PORT := $(shell grep '^app_port:' config/settings.yaml 2>/dev/null | awk '{print $$2}')
 APP_PORT := $(or $(APP_PORT),8080)
@@ -113,3 +114,11 @@ scheduler-run: ## Cloud Schedulerジョブを手動実行（テスト用）
 
 scheduler-describe: ## Cloud Schedulerジョブの状態を表示
 	gcloud scheduler jobs describe $(SCHEDULER_JOB) --location=$(SCHEDULER_REGION)
+
+# ── LINE ───────────────────────────────────────────
+
+line-test-message: ## LINE テスト送信（環境変数 RUN_COACH_LINE_CHANNEL_ACCESS_TOKEN, RUN_COACH_LINE_USER_ID 必須）
+	@test -n "$(RUN_COACH_LINE_CHANNEL_ACCESS_TOKEN)" || (echo "Error: RUN_COACH_LINE_CHANNEL_ACCESS_TOKEN 環境変数が未設定です" && exit 1)
+	@test -n "$(RUN_COACH_LINE_USER_ID)" || (echo "Error: RUN_COACH_LINE_USER_ID 環境変数が未設定です" && exit 1)
+	uv run python -c "from run_coach.line import send_plan_notification; from run_coach.state import Plan, WorkoutPlan; from datetime import date, timedelta; today=date.today(); send_plan_notification(Plan(week_start=today, workout_evaluation='テスト', workouts=[WorkoutPlan(date=today, workout_type='テスト走', purpose='動作確認', duration_min=30, max_hr=140)], load_summary='テスト', reasoning='LINE通知のテスト送信です。'))"
+	@echo "送信完了"

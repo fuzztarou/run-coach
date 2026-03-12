@@ -27,6 +27,8 @@ services:
       - GARMIN_PASSWORD=${GARMIN_PASSWORD}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - GOOGLE_CALENDAR_ID=${GOOGLE_CALENDAR_ID}
+      - RUN_COACH_LINE_CHANNEL_ACCESS_TOKEN=${RUN_COACH_LINE_CHANNEL_ACCESS_TOKEN}
+      - RUN_COACH_LINE_USER_ID=${RUN_COACH_LINE_USER_ID}
     volumes:
       - ./config/profile.yaml:/app/config/profile.yaml:ro
       - ./config/settings.yaml:/app/config/settings.yaml:ro
