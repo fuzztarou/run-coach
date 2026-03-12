@@ -33,26 +33,29 @@ def format_plan_for_line(plan: Plan) -> str:
         f"({DAY_OF_WEEK[day_end.weekday()]})"
     )
 
-    parts: list[str] = [header, ""]
+    parts: list[str] = [header]
+
+    if plan.workout_evaluation:
+        parts.extend(["", f"📝 {plan.workout_evaluation}"])
+
+    parts.append("")
+    parts.append("─" * 10)
+
     for workout in plan.workouts:
         day_name = DAY_OF_WEEK[workout.date.weekday()]
         duration = f" {workout.duration_min}min" if workout.duration_min else ""
-        entry = f"{workout.date.month}/{workout.date.day}({day_name}) {workout.workout_type}{duration}"
 
-        details: list[str] = []
-        if workout.purpose:
-            details.append(workout.purpose)
+        lines = [f"{workout.date.month}/{workout.date.day}({day_name})"]
+        lines.append(f"{workout.workout_type}{duration}")
         if workout.max_hr:
-            details.append(f"HR上限{workout.max_hr}")
+            lines.append(f"HR上限{workout.max_hr}")
         if workout.notes:
-            details.append(workout.notes)
-        if details:
-            entry += f"\n  → {' / '.join(details)}"
+            lines.append(workout.notes)
 
-        parts.append(entry)
+        parts.append("\n" + "\n".join(lines))
 
     if plan.reasoning:
-        parts.extend(["", f"💡 {plan.reasoning}"])
+        parts.extend(["", "─" * 10, "", f"💡 {plan.reasoning}"])
 
     return "\n".join(parts)
 

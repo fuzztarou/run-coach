@@ -61,10 +61,14 @@ def test_format_plan_for_line():
     assert "3/11(水)" in text
     assert "イージーラン" in text
     assert "テンポ走" in text
-    assert "疲労抜き" in text
     assert "HR上限140" in text
+    assert "リカバリージョグ" in text
     assert "💡" in text
     assert "先週のロング走" in text
+    assert "📝 疲労は低め。" in text
+    assert "─" in text
+    # 各ワークアウトが改行区切りで表示されること
+    assert "3/9(月)\nイージーラン 40min\nHR上限140\nリカバリージョグ" in text
 
 
 def test_format_plan_optional_fields():
