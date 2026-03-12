@@ -12,6 +12,7 @@ from linebot.v3.messaging import (
     TextMessage,
 )
 
+from run_coach.calendar import WORKOUT_TYPE_LABEL
 from run_coach.formatter import DAY_OF_WEEK
 from run_coach.state import AgentState, Plan
 
@@ -45,8 +46,11 @@ def format_plan_for_line(plan: Plan) -> str:
         day_name = DAY_OF_WEEK[workout.date.weekday()]
         duration = f" {workout.duration_min}min" if workout.duration_min else ""
 
+        workout_label = WORKOUT_TYPE_LABEL.get(
+            workout.workout_type, workout.workout_type
+        )
         lines = [f"{workout.date.month}/{workout.date.day}({day_name})"]
-        lines.append(f"{workout.workout_type}{duration}")
+        lines.append(f"{workout_label}{duration}")
         if workout.max_hr:
             lines.append(f"HR上限{workout.max_hr}")
         if workout.notes:

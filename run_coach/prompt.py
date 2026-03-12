@@ -179,14 +179,14 @@ def _build_plan_period_section(profile: UserProfile, signals: Signals) -> list[s
     """計画期間セクションを構築する。"""
     today = date.today()
     today_has_workout = any(w.date == today for w in signals.recent_workouts)
-    plan_start = today + timedelta(days=1) if today_has_workout else today
-    days_until_sunday = (6 - plan_start.weekday()) % 7 or 7
-    plan_end = plan_start + timedelta(days=days_until_sunday)
+    plan_end = today + timedelta(days=6)
 
     parts = [f"\n今日の日付: {today}"]
     if today_has_workout:
-        parts.append("※ 今日は既にワークアウト済みです。")
-    parts.append(f"計画期間: {plan_start} 〜 {plan_end}")
+        parts.append(
+            "※ 今日は既にワークアウト済みのため、今日の追加ワークアウトは不要です。"
+        )
+    parts.append(f"計画期間: {today} 〜 {plan_end}")
     parts.append(
         f"週間走行回数の目安: {profile.runs_per_week.min}〜{profile.runs_per_week.max}回"
     )

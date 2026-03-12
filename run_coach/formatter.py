@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from run_coach.calendar import WORKOUT_TYPE_LABEL
 from run_coach.state import AgentState, Plan
 
 INTENSITY_LABEL = {
@@ -35,8 +36,11 @@ def plan_to_markdown(plan: Plan) -> str:
         duration = workout.duration_min or 0
         notes = workout.notes or ""
         day_name = DAY_OF_WEEK[workout.date.weekday()]
+        workout_label = WORKOUT_TYPE_LABEL.get(
+            workout.workout_type, workout.workout_type
+        )
         lines.append(
-            f"| {workout.date} | {day_name} | {workout.workout_type} | {purpose} | {duration} | {intensity} | {hr} | {notes} |"
+            f"| {workout.date} | {day_name} | {workout_label} | {purpose} | {duration} | {intensity} | {hr} | {notes} |"
         )
 
     lines.extend(
