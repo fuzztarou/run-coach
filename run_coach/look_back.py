@@ -13,7 +13,7 @@ from run_coach.database import (
     update_workout_look_back,
     upsert_workouts,
 )
-from run_coach.garmin import _login, summarize_activity
+from run_coach.garmin import _login, summarize_activity, write_description_to_garmin
 from run_coach.line import (
     parse_look_back_message,
     send_look_back_prompt,
@@ -87,23 +87,51 @@ def check_and_prompt_new_activity() -> int:
     return 1
 
 
+def _build_look_back_description(feedback: dict) -> str:
+    """振り返りを Garmin description 用テキストに変換する。"""
+    parts = []
+    if feedback.get("rpe") is not None:
+        parts.append(f"RPE: {feedback['rpe']}")
+    if feedback.get("pain"):
+        parts.append(f"痛み: {feedback['pain']}")
+    if feedback.get("comment"):
+        parts.append(f"コメント: {feedback['comment']}")
+    return "\n".join(parts)
+
+
+def _try_write_back_to_garmin(workout: dict, feedback: dict) -> None:
+    """Garmin description への書き戻しを試みる。失敗してもログのみ。"""
+    if not workout.get("garmin_activity_id") or workout.get("description"):
+        return
+    try:
+        write_description_to_garmin(
+            workout["garmin_activity_id"],
+            _build_look_back_description(feedback),
+        )
+    except Exception:
+        logger.exception("Garmin description write-back failed.")
+
+
 def handle_look_back_reply(text: str, reply_token: str) -> None:
-    """ユーザーの振り返りメッセージを処理してDB保存・LINE返信する。"""
+    """ユーザーの振り返りメッセージを処理してDB保存・Garminへの下記戻し・LINE返信する。"""
     feedback = parse_look_back_message(text)
 
     engine = get_engine()
     with engine.connect() as conn:
         workout = get_pending_look_back_workout(conn)
-        if workout:
-            update_workout_look_back(
-                conn,
-                workout["id"],
-                rpe=feedback["rpe"],
-                pain=feedback["pain"],
-                comment=feedback["comment"],
-            )
-            conn.commit()
-            send_reply(reply_token, "記録しました ✅")
-            logger.info("Look back saved for workout %d.", workout["id"])
-        else:
+        if not workout:
             send_reply(reply_token, "紐付けるワークアウトが見つかりませんでした。")
+            return
+
+        update_workout_look_back(
+            conn,
+            workout["id"],
+            rpe=feedback["rpe"],
+            pain=feedback["pain"],
+            comment=feedback["comment"],
+        )
+        conn.commit()
+
+    _try_write_back_to_garmin(workout, feedback)
+    send_reply(reply_token, "記録しました ✅")
+    logger.info("Look back saved for workout %d.", workout["id"])
