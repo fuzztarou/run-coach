@@ -55,6 +55,28 @@ flowchart LR
 - [ ] Webhook受信 → 振り返りをPostgreSQL保存 + Garmin書き戻し
 - [ ] 環境変数: `LINE_CHANNEL_ACCESS_TOKEN`, `LINE_USER_ID`, `LINE_CHANNEL_SECRET`
 
+## Cloud Scheduler（振り返りチェック）
+
+Cloud Schedulerで `POST /check-new-activity` を定期実行し、新着ランを検知してLINEで振り返りプロンプトを自動送信する。
+
+| 設定 | 値 |
+|------|-----|
+| ジョブ名 | `run-coach-check-activity` |
+| スケジュール | `0 12-23 * * *`（毎日12時〜23時、毎時） |
+| タイムゾーン | `Asia/Tokyo` |
+| ターゲット | Cloud Runの `POST /check-new-activity` |
+| 認証 | OIDC（`run-coach-scheduler` SA） |
+| デッドライン | 60秒 |
+| リトライ | 最大2回、30秒〜120秒バックオフ |
+
+### Makefileコマンド
+
+```bash
+make check-activity-run      # 手動実行（テスト用）
+```
+
+ジョブの作成・削除は `run-coach-infra` リポジトリ（Terraform）で管理する。
+
 ## メッセージ形式（案）
 
 ```
