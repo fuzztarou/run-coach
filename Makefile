@@ -4,6 +4,7 @@
        local-coach cloud-coach upload-profile \
        gcp-set-project \
        scheduler-create scheduler-delete scheduler-run scheduler-describe \
+       check-activity-run \
        line-test-message
 
 APP_PORT := $(shell grep '^app_port:' config/settings.yaml 2>/dev/null | awk '{print $$2}')
@@ -114,6 +115,13 @@ scheduler-run: ## Cloud Schedulerジョブを手動実行（テスト用）
 
 scheduler-describe: ## Cloud Schedulerジョブの状態を表示
 	gcloud scheduler jobs describe $(SCHEDULER_JOB) --location=$(SCHEDULER_REGION)
+
+# ── Cloud Scheduler (check-new-activity) ──────────
+
+CHECK_ACTIVITY_JOB := run-coach-check-activity
+
+check-activity-run: ## 振り返りチェックジョブを手動実行（テスト用）
+	gcloud scheduler jobs run $(CHECK_ACTIVITY_JOB) --location=$(SCHEDULER_REGION)
 
 # ── LINE ───────────────────────────────────────────
 
