@@ -183,6 +183,16 @@ def fetch_activity_splits(activity_id: str) -> list[dict]:
         return []
 
 
+def write_description_to_garmin(garmin_activity_id: str, description: str) -> None:
+    """Garmin アクティビティの description を更新する。"""
+    client = _login()
+    client.garth.connectapi(
+        f"/activity-service/activity/{garmin_activity_id}",
+        method="PUT",
+        json={"activityId": garmin_activity_id, "description": description},
+    )
+
+
 def fetch_workouts(state: AgentState) -> AgentState:
     """Fetch recent workouts from Garmin Connect and populate state.signals."""
     print("Garmin Connect からデータを取得中...")
