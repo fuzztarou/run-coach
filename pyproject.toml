@@ -31,3 +31,8 @@ dev = [
     "ruff>=0.15.5",
     "types-pyyaml>=6.0.12.20250915",
 ]
+
+[tool.mypy]
+[[tool.mypy.overrides]]
+module = "linebot.*"
+ignore_missing_imports = true

@@ -81,3 +81,21 @@ def test_parse_rpe_out_of_range():
     result = parse_description("RPE:15\nComment:テスト")
     assert result["rpe"] is None
     assert result["comment"] == "テスト"
+
+
+def test_parse_japanese_labels():
+    """日本語ラベル「痛み」「コメント」でパースできること。"""
+    text = "RPE: 7\n痛み: 右ひざ\nコメント: 調子良かった"
+    result = parse_description(text)
+    assert result["rpe"] == 7
+    assert result["pain"] == "右ひざ"
+    assert result["comment"] == "調子良かった"
+
+
+def test_parse_japanese_labels_fullwidth_colon():
+    """日本語ラベル＋全角コロンでパースできること。"""
+    text = "RPE：8\n痛み：なし\nコメント：いい感じ"
+    result = parse_description(text)
+    assert result["rpe"] == 8
+    assert result["pain"] == "なし"
+    assert result["comment"] == "いい感じ"

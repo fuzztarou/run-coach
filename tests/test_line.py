@@ -129,7 +129,7 @@ def test_send_notification_no_token(monkeypatch, caplog):
     with caplog.at_level(logging.WARNING):
         send_plan_notification(_make_plan())
 
-    assert "Skipping LINE notification" in caplog.text
+    assert "is not set" in caplog.text
 
 
 def test_send_notification_api_error(monkeypatch, caplog):
@@ -145,8 +145,10 @@ def test_send_notification_api_error(monkeypatch, caplog):
         mock_api_client_cls.return_value.__exit__ = MagicMock(return_value=False)
 
         with patch("run_coach.line.MessagingApi") as mock_messaging_api_cls:
-            mock_messaging_api_cls.return_value.push_message.side_effect = Exception(
-                "API Error"
+            from linebot.v3.messaging.rest import ApiException
+
+            mock_messaging_api_cls.return_value.push_message.side_effect = ApiException(
+                status=500, reason="API Error"
             )
 
             with caplog.at_level(logging.ERROR):
