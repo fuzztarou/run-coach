@@ -33,6 +33,7 @@ workouts = Table(
     Column("rpe", Integer),
     Column("pain", Text),
     Column("comment", Text),
+    Column("look_back_prompted_at", DateTime(timezone=True)),
     Column("created_at", DateTime(timezone=True), server_default=func.now()),
 )
 

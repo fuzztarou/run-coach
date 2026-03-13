@@ -5,6 +5,8 @@ from __future__ import annotations
 import os
 from datetime import date, timedelta
 
+from datetime import datetime, timezone as tz
+
 from sqlalchemy import Connection, Engine, create_engine, select, text
 from sqlalchemy.dialects.postgresql import insert
 
@@ -188,3 +190,42 @@ def get_splits_by_workout_id(conn: Connection, workout_id: int) -> list[dict]:
     )
     result = conn.execute(stmt)
     return [row._asdict() for row in result]
+
+
+def mark_look_back_prompted(conn: Connection, workout_id: int) -> None:
+    """look_back_prompted_atを現在時刻に更新する。"""
+    conn.execute(
+        workouts.update()
+        .where(workouts.c.id == workout_id)
+        .values(look_back_prompted_at=datetime.now(tz.utc))
+    )
+
+
+def get_pending_look_back_workout(conn: Connection) -> dict | None:
+    """振り返りPrompt送信済み＆未回答のワークアウトを日付降順で1件返す。"""
+    stmt = (
+        select(workouts)
+        .where(
+            workouts.c.look_back_prompted_at.isnot(None),
+            workouts.c.rpe.is_(None),
+        )
+        .order_by(workouts.c.date.desc())
+        .limit(1)
+    )
+    row = conn.execute(stmt).fetchone()
+    return row._asdict() if row else None
+
+
+def update_workout_look_back(
+    conn: Connection,
+    workout_id: int,
+    rpe: int | None,
+    pain: str | None,
+    comment: str | None,
+) -> None:
+    """振り返りデータ（look_back）を更新する。"""
+    conn.execute(
+        workouts.update()
+        .where(workouts.c.id == workout_id)
+        .values(rpe=rpe, pain=pain, comment=comment)
+    )
