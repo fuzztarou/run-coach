@@ -55,45 +55,6 @@ flowchart LR
 | インフラ       | Cloud Run / Cloud Scheduler / Secret Manager / Terraform       |
 | セキュリティ   | gitleaks / OIDC トークン検証 / LINE署名検証                    |
 
-## セットアップ
-
-```bash
-uv sync
-cp config/profile.example.yaml config/profile.yaml
-# config/profile.yaml を編集
-```
-
-### 環境変数
-
-| 変数名                                | 用途                          |
-| ------------------------------------- | ----------------------------- |
-| `GARMIN_EMAIL`                        | Garmin Connect メールアドレス |
-| `GARMIN_PASSWORD`                     | Garmin Connect パスワード     |
-| `OPENAI_API_KEY`                      | OpenAI API キー               |
-| `DATABASE_URL`                        | PostgreSQL 接続文字列         |
-| `GOOGLE_CALENDAR_ID`                  | Google Calendar ID            |
-| `RUN_COACH_LINE_CHANNEL_ACCESS_TOKEN` | LINE Channel Access Token     |
-| `RUN_COACH_LINE_CHANNEL_SECRET`       | LINE Channel Secret           |
-| `RUN_COACH_LINE_USER_ID`              | LINE User ID                  |
-
-## 使い方
-
-```bash
-# CLI実行
-uv run python -m run_coach
-
-# Docker
-make up            # app + db 起動
-make local-coach   # プラン生成
-make down          # 停止
-make help          # 全コマンド一覧
-```
-
-## テスト
-
-```bash
-uv run pytest tests/ -v
-```
 
 ## 設計ドキュメント
 
