@@ -110,8 +110,25 @@ make down          # 停止
 - 各処理は state を受け取り state を返す関数にする（LangGraphノード）
 - テストは各Phaseで書く
 
+### テストスタイル
+- フラットな `def test_*()` 関数で書く（クラスは使わない）
+- HTTPエンドポイントのテストは `TestClient` で実際にリクエストを投げる（`MagicMock()` で Request を作らない）
+- 環境変数は `monkeypatch.setenv()` / `monkeypatch.delenv()` を使う（`patch.dict("os.environ")` は使わない）
+
 ### セキュリティ
 - Garminパスワードはコードに残さない（トークン認証を利用）
 - SQLiteファイルのパーミッション: 600
 - LINE Webhookは署名検証必須
-- Cloud RunはIAM認証
+- Cloud Runは未認証許可 + アプリ層でOIDCトークン検証（`run_coach/auth.py`）
+
+### 認証マトリクス
+
+`/internal/*` 配下は `APIRouter` の `dependencies` でOIDCトークン検証が自動適用される。
+内部向けエンドポイントを追加する場合は `internal_router` に登録すること。
+
+| エンドポイント | 認証方式 |
+|---|---|
+| `GET /health` | なし（公開） |
+| `POST /webhook/line` | LINE署名検証 |
+| `POST /internal/coach` | OIDCトークン検証（自動） |
+| `POST /internal/check-new-activity` | OIDCトークン検証（自動） |
