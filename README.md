@@ -27,15 +27,14 @@ flowchart LR
 
     API --> LLM[LLM API]
 
-    API --> DS[Garmin / Calendar / 天気]
+    API <-->|取得 / 書き戻し| DS[Garmin / Calendar / 天気]
 ```
 
 ### LangGraph ワークフロー
 
 ```mermaid
 flowchart LR
-    FW[fetch_workouts] --> FR[fetch_races] --> FC[fetch_calendar] --> FWE[fetch_weather]
-    FWE --> LLM[generate_plan]
+    F[データ取得<br>workouts / races<br>calendar / weather] --> LLM[generate_plan]
     LLM --> SC[self_check]
     SC -->|OK| OUT[output_plan] --> SYNC[sync_calendar]
     SC -->|NG| LLM
@@ -45,16 +44,16 @@ flowchart LR
 
 ## 技術スタック
 
-| カテゴリ | 技術 |
-|---|---|
-| 言語 | Python 3.11+ / uv |
-| AIエージェント | LangGraph / OpenAI API |
-| スキーマ | Pydantic v2 |
-| API | FastAPI |
-| DB | PostgreSQL (Supabase) / SQLAlchemy / Alembic |
-| 外部連携 | Garmin Connect / Google Calendar / Open-Meteo / LINE Messaging |
-| インフラ | Cloud Run / Cloud Scheduler / Secret Manager / Terraform |
-| セキュリティ | gitleaks / OIDC トークン検証 / LINE署名検証 |
+| カテゴリ       | 技術                                                           |
+| -------------- | -------------------------------------------------------------- |
+| 言語           | Python 3.11+ / uv                                              |
+| AIエージェント | LangGraph / OpenAI API                                         |
+| スキーマ       | Pydantic v2                                                    |
+| API            | FastAPI                                                        |
+| DB             | PostgreSQL (Supabase) / SQLAlchemy / Alembic                   |
+| 外部連携       | Garmin Connect / Google Calendar / Open-Meteo / LINE Messaging |
+| インフラ       | Cloud Run / Cloud Scheduler / Secret Manager / Terraform       |
+| セキュリティ   | gitleaks / OIDC トークン検証 / LINE署名検証                    |
 
 ## セットアップ
 
@@ -66,16 +65,16 @@ cp config/profile.example.yaml config/profile.yaml
 
 ### 環境変数
 
-| 変数名 | 用途 |
-|---|---|
-| `GARMIN_EMAIL` | Garmin Connect メールアドレス |
-| `GARMIN_PASSWORD` | Garmin Connect パスワード |
-| `OPENAI_API_KEY` | OpenAI API キー |
-| `DATABASE_URL` | PostgreSQL 接続文字列 |
-| `GOOGLE_CALENDAR_ID` | Google Calendar ID |
-| `RUN_COACH_LINE_CHANNEL_ACCESS_TOKEN` | LINE Channel Access Token |
-| `RUN_COACH_LINE_CHANNEL_SECRET` | LINE Channel Secret |
-| `RUN_COACH_LINE_USER_ID` | LINE User ID |
+| 変数名                                | 用途                          |
+| ------------------------------------- | ----------------------------- |
+| `GARMIN_EMAIL`                        | Garmin Connect メールアドレス |
+| `GARMIN_PASSWORD`                     | Garmin Connect パスワード     |
+| `OPENAI_API_KEY`                      | OpenAI API キー               |
+| `DATABASE_URL`                        | PostgreSQL 接続文字列         |
+| `GOOGLE_CALENDAR_ID`                  | Google Calendar ID            |
+| `RUN_COACH_LINE_CHANNEL_ACCESS_TOKEN` | LINE Channel Access Token     |
+| `RUN_COACH_LINE_CHANNEL_SECRET`       | LINE Channel Secret           |
+| `RUN_COACH_LINE_USER_ID`              | LINE User ID                  |
 
 ## 使い方
 
