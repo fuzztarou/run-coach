@@ -1,69 +1,88 @@
 # run-coach
 
-Garmin Connect のワークアウト履歴をもとに、LLM が来週のトレーニング計画を自動生成する CLI ツール。
+Garmin Connect のワークアウト履歴・スケジュール・天気予報・大会情報をもとに、LLM が週次トレーニングプランを自動生成するAIエージェント。生成プランはコーチングルールで自動検証し、LINE で配信する。
 
-## できること
+## アーキテクチャ
 
-- Garmin Connect から直近2週間のランニング・ウォーキング履歴を取得
-- レース予測タイム（5K/10K/ハーフ/フル）を取得
-- 履歴を評価し、来週のトレーニング計画を構造化 JSON で生成
-- 各ワークアウトに目的・心拍上限・曜日を付与して Markdown 表示
+```mermaid
+flowchart LR
+    U[ユーザー] <--> LINE[LINE]
 
-## 出力例
+    LINE -->|振り返り回答| API
+    API -->|プラン配信<br>振り返り促進| LINE
 
+    subgraph GCP[Google Cloud]
+        CS[Cloud Scheduler<br>毎週: プラン生成<br>毎時: 新着チェック] -->|OIDC認証| API
+        subgraph Cloud Run
+            API[FastAPI<br>+ LangGraph]
+        end
+    end
+
+    API <--> DB[(Supabase<br>PostgreSQL)]
+
+    API --> LLM[LLM API]
+
+    API --> DS[Garmin / Calendar / 天気]
 ```
-## ワークアウト評価
 
-持久力は向上しているが、ペースのバラつきが見られる。
-閾値トレーニングを取り入れることでさらなる向上が期待できる。
+### LangGraph ワークフロー
 
-## 来週のメニュー
-
-| 日付       | 曜日 | メニュー | 目的         | 時間 | 強度 | HR上限 | メモ                   |
-|------------|------|----------|-------------|------|------|--------|------------------------|
-| 2026-03-09 | 月   | easy_run | 疲労抜き     | 40   | 低   | 140    | 軽めのジョギング         |
-| 2026-03-11 | 水   | tempo    | 閾値向上     | 30   | 中   | 160    | レースペースを意識       |
-| 2026-03-14 | 土   | long_run | 有酸素ベース | 90   | 低   | 150    | ゆっくりロング走         |
+```mermaid
+flowchart LR
+    FW[fetch_workouts] --> FR[fetch_races] --> FC[fetch_calendar] --> FWE[fetch_weather]
+    FWE --> LLM[generate_plan]
+    LLM --> SC[self_check]
+    SC -->|OK| OUT[output_plan] --> SYNC[sync_calendar]
+    SC -->|NG| LLM
 ```
+
+各ノードは `AgentState` を受け取り返す関数。セルフチェックで違反検出時はプラン再生成にループバックする。
+
+## 技術スタック
+
+| カテゴリ | 技術 |
+|---|---|
+| 言語 | Python 3.11+ / uv |
+| AIエージェント | LangGraph / OpenAI API |
+| スキーマ | Pydantic v2 |
+| API | FastAPI |
+| DB | PostgreSQL (Supabase) / SQLAlchemy / Alembic |
+| 外部連携 | Garmin Connect / Google Calendar / Open-Meteo / LINE Messaging |
+| インフラ | Cloud Run / Cloud Scheduler / Secret Manager / Terraform |
+| セキュリティ | gitleaks / OIDC トークン検証 / LINE署名検証 |
 
 ## セットアップ
 
 ```bash
-# 依存インストール
 uv sync
-
-# プロフィール設定
 cp config/profile.example.yaml config/profile.yaml
-# config/profile.yaml を自分の情報に編集
+# config/profile.yaml を編集
 ```
 
 ### 環境変数
 
-以下の環境変数が必要です：
-
-- `GARMIN_EMAIL` — Garmin Connect のメールアドレス
-- `GARMIN_PASSWORD` — Garmin Connect のパスワード
-- `OPENAI_API_KEY` — OpenAI API キー
+| 変数名 | 用途 |
+|---|---|
+| `GARMIN_EMAIL` | Garmin Connect メールアドレス |
+| `GARMIN_PASSWORD` | Garmin Connect パスワード |
+| `OPENAI_API_KEY` | OpenAI API キー |
+| `DATABASE_URL` | PostgreSQL 接続文字列 |
+| `GOOGLE_CALENDAR_ID` | Google Calendar ID |
+| `RUN_COACH_LINE_CHANNEL_ACCESS_TOKEN` | LINE Channel Access Token |
+| `RUN_COACH_LINE_CHANNEL_SECRET` | LINE Channel Secret |
+| `RUN_COACH_LINE_USER_ID` | LINE User ID |
 
 ## 使い方
 
 ```bash
+# CLI実行
 uv run python -m run_coach
-```
 
-初回実行時に Garmin Connect へログインし、トークンが `~/.garminconnect` に保存されます。2回目以降はトークン認証です。
-
-## プロフィール設定
-
-```yaml
-# config/profile.yaml
-birthday: "1980-10-15"
-goal: "サブ4"
-runs_per_week:
-  min: 3
-  max: 4
-injury_history:
-  - "2025年 左膝IT band"
+# Docker
+make up            # app + db 起動
+make local-coach   # プラン生成
+make down          # 停止
+make help          # 全コマンド一覧
 ```
 
 ## テスト
@@ -72,10 +91,6 @@ injury_history:
 uv run pytest tests/ -v
 ```
 
-## 技術スタック
+## 設計ドキュメント
 
-- Python + uv
-- Pydantic（スキーマ定義・バリデーション）
-- garminconnect（Garmin Connect API）
-- OpenAI API（GPT-4o-mini）
-- gitleaks（pre-commit シークレット検出）
+全体設計は [DESIGN.md](DESIGN.md)、各フェーズの詳細は [docs/](docs/) を参照。
