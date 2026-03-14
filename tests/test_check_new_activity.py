@@ -1,4 +1,4 @@
-"""POST /check-new-activity のテスト。"""
+"""POST /internal/check-new-activity のテスト。"""
 
 from datetime import date
 from unittest.mock import MagicMock, patch
@@ -65,7 +65,7 @@ def test_check_new_activity_sends_prompt(mock_login, _mock_conn, monkeypatch):
         from run_coach.api import app
 
         client = TestClient(app)
-        response = client.post("/check-new-activity")
+        response = client.post("/internal/check-new-activity")
 
     assert response.status_code == 200
     assert response.json() == {"prompted": 1}
@@ -104,7 +104,7 @@ def test_check_new_activity_skips_when_comment_exists(
         from run_coach.api import app
 
         client = TestClient(app)
-        response = client.post("/check-new-activity")
+        response = client.post("/internal/check-new-activity")
 
     assert response.status_code == 200
     assert response.json() == {"prompted": 0}
@@ -143,7 +143,7 @@ def test_check_new_activity_skips_already_prompted(mock_login, _mock_conn, monke
         from run_coach.api import app
 
         client = TestClient(app)
-        response = client.post("/check-new-activity")
+        response = client.post("/internal/check-new-activity")
 
     assert response.status_code == 200
     assert response.json() == {"prompted": 0}
@@ -161,7 +161,7 @@ def test_check_new_activity_no_activities(mock_login, _mock_conn):
     from run_coach.api import app
 
     client = TestClient(app)
-    response = client.post("/check-new-activity")
+    response = client.post("/internal/check-new-activity")
 
     assert response.status_code == 200
     assert response.json() == {"prompted": 0}
@@ -186,7 +186,7 @@ def test_check_new_activity_skips_non_running(mock_login, _mock_conn):
     from run_coach.api import app
 
     client = TestClient(app)
-    response = client.post("/check-new-activity")
+    response = client.post("/internal/check-new-activity")
 
     assert response.status_code == 200
     assert response.json() == {"prompted": 0}
