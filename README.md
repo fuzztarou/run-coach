@@ -1,81 +1,74 @@
 # run-coach
 
-Garmin Connect のワークアウト履歴をもとに、LLM が来週のトレーニング計画を自動生成する CLI ツール。
+自分のランニング計画を見直すとき、毎回 Garmin の記録や予定を見ながら判断していたため、その作業を半自動化する目的で作っている個人開発です。Garmin の実績、カレンダー、天気、大会情報をもとに、週次のトレーニングプランを生成します。
 
-## できること
+## 現在実装していること
 
-- Garmin Connect から直近2週間のランニング・ウォーキング履歴を取得
-- レース予測タイム（5K/10K/ハーフ/フル）を取得
-- 履歴を評価し、来週のトレーニング計画を構造化 JSON で生成
-- 各ワークアウトに目的・心拍上限・曜日を付与して Markdown 表示
+- Garmin Connect のワークアウト履歴・体調・レース予測をもとに、LLM が週次プランを生成
+- Google Calendar の空き枠・天気予報・大会情報を加味してスケジュール調整
+- コーチングルール（負荷上限・テーパリング等）でプランを自動検証し、違反時は再生成
+- 生成プランを Google Calendar に登録し、LINE でプラン配信
+- ラン後に LINE で振り返りを促し、回答を DB に記録（必要に応じて Garmin description に反映）
 
-## 出力例
+## 実装上のポイント
 
-```
-## ワークアウト評価
+- 各処理を `AgentState` を受け取り返す関数にして、LangGraph でフロー制御。セルフチェックで違反があれば再生成に戻るループも含めてグラフで定義している
+- LLM の出力を含め、すべてのデータを Pydantic v2 のスキーマで定義し、型が合わなければエラーにしている
+- Cloud Scheduler → Cloud Run は OIDC トークン検証、LINE Webhook は署名検証。LLM には氏名・メール・GPS座標などの識別情報は送らず、ワークアウト要約と目標設定のみ渡している
 
-持久力は向上しているが、ペースのバラつきが見られる。
-閾値トレーニングを取り入れることでさらなる向上が期待できる。
-
-## 来週のメニュー
-
-| 日付       | 曜日 | メニュー | 目的         | 時間 | 強度 | HR上限 | メモ                   |
-|------------|------|----------|-------------|------|------|--------|------------------------|
-| 2026-03-09 | 月   | easy_run | 疲労抜き     | 40   | 低   | 140    | 軽めのジョギング         |
-| 2026-03-11 | 水   | tempo    | 閾値向上     | 30   | 中   | 160    | レースペースを意識       |
-| 2026-03-14 | 土   | long_run | 有酸素ベース | 90   | 低   | 150    | ゆっくりロング走         |
-```
-
-## セットアップ
+## 動かし方
 
 ```bash
-# 依存インストール
-uv sync
-
-# プロフィール設定
-cp config/profile.example.yaml config/profile.yaml
-# config/profile.yaml を自分の情報に編集
+make up            # Docker で app + db 起動
+make local-coach   # プラン生成（JSON整形出力）
 ```
 
-### 環境変数
+## アーキテクチャ
 
-以下の環境変数が必要です：
+```mermaid
+flowchart LR
+    U[ユーザー] <--> LINE[LINE]
 
-- `GARMIN_EMAIL` — Garmin Connect のメールアドレス
-- `GARMIN_PASSWORD` — Garmin Connect のパスワード
-- `OPENAI_API_KEY` — OpenAI API キー
+    LINE -->|振り返り回答| API
+    API -->|プラン配信<br>振り返り促進| LINE
 
-## 使い方
+    subgraph GCP[Google Cloud]
+        CS[Cloud Scheduler<br>毎週: プラン生成<br>毎時: 新着チェック] -->|OIDC認証| API
+        subgraph Cloud Run
+            API[FastAPI<br>+ LangGraph]
+        end
+    end
 
-```bash
-uv run python -m run_coach
+    API <--> DB[(Supabase<br>PostgreSQL)]
+
+    API --> LLM[LLM API]
+
+    API <-->|取得 / 書き戻し| DS[Garmin / Calendar / 天気]
 ```
 
-初回実行時に Garmin Connect へログインし、トークンが `~/.garminconnect` に保存されます。2回目以降はトークン認証です。
+### LangGraph ワークフロー
 
-## プロフィール設定
-
-```yaml
-# config/profile.yaml
-birthday: "1980-10-15"
-goal: "サブ4"
-runs_per_week:
-  min: 3
-  max: 4
-injury_history:
-  - "2025年 左膝IT band"
-```
-
-## テスト
-
-```bash
-uv run pytest tests/ -v
+```mermaid
+flowchart LR
+    F[データ取得<br>workouts / races<br>calendar / weather] --> LLM[generate_plan]
+    LLM --> SC[self_check]
+    SC -->|OK| OUT[output_plan] --> SYNC[sync_calendar]
+    SC -->|NG| LLM
 ```
 
 ## 技術スタック
 
-- Python + uv
-- Pydantic（スキーマ定義・バリデーション）
-- garminconnect（Garmin Connect API）
-- OpenAI API（GPT-4o-mini）
-- gitleaks（pre-commit シークレット検出）
+| カテゴリ       | 技術                                                           |
+| -------------- | -------------------------------------------------------------- |
+| 言語           | Python 3.11+ / uv                                              |
+| AIエージェント | LangGraph / OpenAI API                                         |
+| スキーマ       | Pydantic v2                                                    |
+| API            | FastAPI                                                        |
+| DB             | PostgreSQL (Supabase) / SQLAlchemy / Alembic                   |
+| 外部連携       | Garmin Connect / Google Calendar / Open-Meteo / LINE Messaging |
+| インフラ       | Cloud Run / Cloud Scheduler / Secret Manager / Terraform       |
+| セキュリティ   | gitleaks / OIDC トークン検証 / LINE署名検証                    |
+
+## 設計ドキュメント
+
+全体設計は [DESIGN.md](DESIGN.md)、各フェーズの詳細は [docs/](docs/) を参照。

@@ -65,12 +65,12 @@ migrate-down: ## 1つ前にロールバック
 # ── API ─────────────────────────────────────────────
 
 local-coach: ## プラン生成 - ローカル (JSON整形出力)
-	@curl -s -X POST http://localhost:$(APP_PORT)/coach | jq .
+	@curl -s -X POST http://localhost:$(APP_PORT)/internal/coach | jq .
 
 cloud-coach: ## プラン生成 - Cloud Run (JSON整形出力)
 	@CLOUD_RUN_URL=$$(gcloud run services describe run-coach --region=asia-northeast1 --format='value(status.url)') && \
 	TOKEN=$$(gcloud auth print-identity-token) && \
-	curl -s -X POST "$$CLOUD_RUN_URL/coach" -H "Authorization: Bearer $$TOKEN" | jq .
+	curl -s -X POST "$$CLOUD_RUN_URL/internal/coach" -H "Authorization: Bearer $$TOKEN" | jq .
 
 # ── GCP ─────────────────────────────────────────────
 
