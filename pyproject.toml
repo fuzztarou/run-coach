@@ -1,7 +1,7 @@
 [project]
 name = "run-coach"
 version = "0.1.0"
-description = "AI-powered running coach CLI"
+description = "AI-powered personal running coach with Garmin + LLM + LINE"
 requires-python = ">=3.11.5"
 dependencies = [
     "garminconnect>=0.2.38",

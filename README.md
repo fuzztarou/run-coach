@@ -1,11 +1,27 @@
 # run-coach
 
-ランニング用AIコーチ。Garmin Connect の実績データをもとに、週次トレーニングプランを自動生成してLINEで配信する。
+自分のランニング計画を見直すとき、毎回 Garmin の記録や予定を見ながら判断していたため、その作業を半自動化する目的で作っている個人開発です。Garmin の実績、カレンダー、天気、大会情報をもとに、週次のトレーニングプランを生成します。
 
-- Garmin Connect からワークアウト履歴・体調・レース予測を取得
-- Google Calendar・天気予報・大会情報を加味してプランを生成
-- コーチングルール（負荷上限・テーパリング等）で自動検証、違反時は再生成
-- LINE でプラン配信、ラン後に振り返りを促して記録を蓄積
+## 現在実装していること
+
+- Garmin Connect のワークアウト履歴・体調・レース予測をもとに、LLM が週次プランを生成
+- Google Calendar の空き枠・天気予報・大会情報を加味してスケジュール調整
+- コーチングルール（負荷上限・テーパリング等）でプランを自動検証し、違反時は再生成
+- 生成プランを Google Calendar に登録し、LINE でプラン配信
+- ラン後に LINE で振り返りを促し、回答を DB に記録（必要に応じて Garmin description に反映）
+
+## 実装上のポイント
+
+- 各処理を `AgentState` を受け取り返す関数にして、LangGraph でフロー制御。セルフチェックで違反があれば再生成に戻るループも含めてグラフで定義している
+- LLM の出力を含め、すべてのデータを Pydantic v2 のスキーマで定義し、型が合わなければエラーにしている
+- Cloud Scheduler → Cloud Run は OIDC トークン検証、LINE Webhook は署名検証。LLM には氏名・メール・GPS座標などの識別情報は送らず、ワークアウト要約と目標設定のみ渡している
+
+## 動かし方
+
+```bash
+make up            # Docker で app + db 起動
+make local-coach   # プラン生成（JSON整形出力）
+```
 
 ## アーキテクチャ
 
@@ -40,8 +56,6 @@ flowchart LR
     SC -->|NG| LLM
 ```
 
-各ノードは `AgentState` を受け取り返す関数。セルフチェックで違反検出時はプラン再生成にループバックする。
-
 ## 技術スタック
 
 | カテゴリ       | 技術                                                           |
@@ -54,7 +68,6 @@ flowchart LR
 | 外部連携       | Garmin Connect / Google Calendar / Open-Meteo / LINE Messaging |
 | インフラ       | Cloud Run / Cloud Scheduler / Secret Manager / Terraform       |
 | セキュリティ   | gitleaks / OIDC トークン検証 / LINE署名検証                    |
-
 
 ## 設計ドキュメント
 
