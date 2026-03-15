@@ -8,7 +8,7 @@ Macを閉じていても自動でプラン生成が動く状態にする。Phase
 
 ## 前提
 
-- Phase 6.2 でCloud Run上にプラン生成API（`POST /coach`）がデプロイ済みであること
+- Phase 6.2 でCloud Run上にプラン生成API（`POST /internal/coach`）がデプロイ済みであること
 
 ## フロー
 
@@ -48,7 +48,7 @@ flowchart TB
 | ジョブ名 | `run-coach-daily` |
 | スケジュール | `0 9 * * *`（毎朝 09:00 JST） |
 | タイムゾーン | `Asia/Tokyo` |
-| ターゲット | Cloud Runの `POST /coach` |
+| ターゲット | Cloud Runの `POST /internal/coach` |
 | 認証 | OIDC（`run-coach-scheduler` SA） |
 | デッドライン | 300秒 |
 | リトライ | 最大3回、30秒〜300秒バックオフ |
@@ -80,7 +80,7 @@ gcloud scheduler jobs create http run-coach-daily \
   --location=asia-northeast1 \
   --schedule="0 9 * * *" \
   --time-zone="Asia/Tokyo" \
-  --uri="${CLOUD_RUN_URL}/coach" \
+  --uri="${CLOUD_RUN_URL}/internal/coach" \
   --http-method=POST \
   --oidc-service-account-email=run-coach-scheduler@run-coach-489511.iam.gserviceaccount.com \
   --oidc-token-audience="${CLOUD_RUN_URL}" \

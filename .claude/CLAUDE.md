@@ -26,36 +26,6 @@
 
 **不明点は選択肢とメリデメを提示し、自分の意見を述べること。**
 
-## プロジェクト構成
-
-```
-run-coach/
-├── run_coach/             # ソースコード
-│   ├── __init__.py
-│   ├── __main__.py        # エントリーポイント
-│   ├── state.py           # Pydantic スキーマ (AgentState等)
-│   ├── garmin.py          # Garmin データ取得
-│   ├── calendar.py        # カレンダー取得
-│   ├── weather.py         # 天気予報取得
-│   ├── config.py          # 設定読み込み (settings.yaml / profile.yaml)
-│   ├── graph.py           # LangGraph グラフ定義
-│   ├── prompt.py          # LLM プロンプトテンプレート
-│   ├── planner.py         # LLM プラン生成
-│   ├── plan_review.py     # セルフチェック（コーチングルール検証）
-│   └── formatter.py       # JSON → Markdown 変換
-├── tests/                 # テスト
-├── docs/                  # Phase毎の詳細設計
-├── config/                # 設定ファイル
-│   ├── settings.yaml      # アプリケーション設定（LLMモデル等）
-│   └── settings.example.yaml
-├── DESIGN.md              # 全体設計書
-├── pyproject.toml         # uv プロジェクト設定
-├── .env.example           # 必要な環境変数の一覧
-├── .github/
-│   └── workflows/ci.yml   # GitHub Actions (lint + test)
-└── .claude/
-```
-
 ## コマンド
 
 ```bash
