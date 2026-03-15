@@ -42,32 +42,43 @@ flowchart TB
 
 ### Cloud Run デプロイ
 
-- [ ] Dockerfile作成
-- [ ] FastAPIアプリ作成（`/generate`, `/health`）
-- [ ] Cloud Runサービスのデプロイ
-- [ ] Cloud Schedulerの設定（週次プラン生成トリガー）
-- [ ] Supabase接続設定（`DATABASE_URL` / pooler）
-- [ ] Google Calendar APIのサービスアカウント設定
-- [ ] Secret Managerで認証情報を管理（Garmin / OpenAI / Google Calendar）
+- [x] Dockerfile作成
+- [x] FastAPIアプリ作成（`POST /internal/coach`, `GET /health`）
+- [x] Cloud Runサービスのデプロイ
+- [x] Cloud Schedulerの設定（週次プラン生成トリガー）
+- [x] Supabase接続設定（`DATABASE_URL` / pooler）
+- [x] Google Calendar APIのサービスアカウント設定
+- [x] Secret Managerで認証情報を管理（Garmin / OpenAI / Google Calendar）
 
 ### HTTPエンドポイント
 
-- [ ] `/generate` — Cloud Schedulerから呼ばれ、プラン生成 → Calendar同期
-- [ ] ヘルスチェック用エンドポイント
+- [x] `POST /internal/coach` — Cloud Schedulerから呼ばれ、プラン生成 → Calendar同期 → LINE通知
+- [x] `POST /internal/check-new-activity` — 新着ラン検知 → LINE振り返りプロンプト
+- [x] `POST /webhook/line` — LINE Webhook受信（振り返り返信の保存）
+- [x] `GET /health` — ヘルスチェック
+
+`/internal/*` 配下はOIDCトークン検証が自動適用される。
 
 ## アプリ構成
 
 - Webフレームワークは `FastAPI` を採用する
-- `/generate` で LangGraph 実行を起動する
+- `/internal/coach` で LangGraph 実行を起動する
+- `/internal/check-new-activity` で新着ラン検知を実行する
 - `/health` でヘルスチェックを返す
 
 ```python
-@app.post("/generate")
-def generate() -> dict:
+internal_router = APIRouter(prefix="/internal", dependencies=[Depends(require_oidc)])
+
+@internal_router.post("/coach")
+async def coach() -> dict:
+    ...
+
+@internal_router.post("/check-new-activity")
+async def check_new_activity() -> dict:
     ...
 
 @app.get("/health")
-def health() -> dict:
+async def health() -> dict:
     return {"ok": True}
 ```
 
@@ -132,22 +143,16 @@ gcloud run deploy run-coach \
 
 ## テスト方針
 
-- [ ] 既存テスト全通し: Phase 1〜5のテストがCloud Run環境でも通ること
-- [ ] 認証: Secret Managerからの認証情報取得が動くか
-- [ ] DB接続: Supabaseに接続して `workouts` / `workout_splits` を読めるか
-- [ ] HTTPエンドポイント: `/generate` が正しくプラン生成を実行するか
-- [ ] E2Eテスト: Cloud Scheduler → Cloud Run の一連の流れ
+- [x] 既存テスト全通し: Phase 1〜5のテストがCloud Run環境でも通ること
+- [x] 認証: Secret Managerからの認証情報取得が動くか
+- [x] DB接続: Supabaseに接続して `workouts` / `workout_splits` を読めるか
+- [x] HTTPエンドポイント: `POST /internal/coach` が正しくプラン生成を実行するか
+- [x] E2Eテスト: Cloud Scheduler → Cloud Run の一連の流れ
 
 ```python
 # テスト例
-def test_generate_endpoint(client):
-    """/generate エンドポイントが正常に動作するか"""
-    response = client.post("/generate")
+def test_coach_endpoint(client):
+    """/internal/coach エンドポイントが正常に動作するか"""
+    response = client.post("/internal/coach")
     assert response.status_code == 200
-
-def test_secret_manager_integration():
-    """Secret Managerから認証情報を取得できるか"""
-    # モック環境での検証
-    secret = get_secret("GARMIN_EMAIL")
-    assert secret is not None
 ```

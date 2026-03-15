@@ -93,13 +93,13 @@ def test_self_check_passes_valid_plan():
     """ルール準拠のプランがOKになること"""
     state = AgentState(plan=valid_plan, ...)
     result = self_check(state)
-    assert result.self_check_result == "ok"
+    assert result.review_result == "ok"
 
 def test_self_check_rejects_too_many_high_intensity():
     """高強度が3回以上のプランがNGになること"""
     state = AgentState(plan=plan_with_3_high_intensity, ...)
     result = self_check(state)
-    assert result.self_check_result == "ng"
+    assert result.review_result == "ng"
 
 def test_retry_limit():
     """リトライ上限に達したら最後のプランを返すこと"""
@@ -116,6 +116,6 @@ class AgentState(BaseModel):
     signals: Signals
     constraints: Constraints
     plan: Plan | None = None
-    self_check_result: str | None = None  # "ok" | "ng"
-    self_check_violations: list[str] = Field(default_factory=list)
+    review_result: str | None = None  # "ok" | "ng"
+    review_violations: list[str] = Field(default_factory=list)
 ```

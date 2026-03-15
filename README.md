@@ -14,7 +14,7 @@
 
 - 各処理を `AgentState` を受け取り返す関数にして、LangGraph でフロー制御。セルフチェックで違反があれば再生成に戻るループも含めてグラフで定義している
 - LLM の出力を含め、すべてのデータを Pydantic v2 のスキーマで定義し、型が合わなければエラーにしている
-- Cloud Scheduler → Cloud Run は OIDC トークン検証、LINE Webhook は署名検証。LLM には氏名・メール・GPS座標などの識別情報は送らず、ワークアウト要約と目標設定のみ渡している
+- Cloud Scheduler → Cloud Run は OIDC トークン検証、LINE Webhook は署名検証。LLM には氏名・メール・GPS座標などの識別情報は送らない
 
 ## 動かし方
 

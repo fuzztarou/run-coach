@@ -12,7 +12,7 @@ Phase 1〜2で作った自前のフロー制御（関数の順次呼び出し + 
 ```mermaid
 flowchart TB
     START((START))
-    START --> FG[fetch_garmin<br>Node]
+    START --> FG[fetch_workouts<br>Node]
     FG --> FC[fetch_calendar<br>Node]
     FC --> FW[fetch_weather<br>Node]
     FW --> GR[apply_guardrails<br>Node]
@@ -40,9 +40,9 @@ flowchart TB
 
 | 自前実装 | LangGraph |
 |--|--|
-| `def fetch_garmin(state)` | `graph.add_node("fetch_garmin", fetch_garmin)` |
+| `def fetch_workouts(state)` | `graph.add_node("fetch_workouts", fetch_workouts)` |
 | `def generate_plan(state)` | `graph.add_node("generate_plan", generate_plan)` |
-| 順次呼び出し (`run()`) | `graph.add_edge("fetch_garmin", "fetch_calendar")` |
+| 順次呼び出し (`run()`) | `graph.add_edge("fetch_workouts", "fetch_calendar")` |
 | if文での分岐 | `graph.add_conditional_edges("self_check", ...)` |
 
 ## コードイメージ
@@ -53,7 +53,7 @@ from langgraph.graph import StateGraph, END
 graph = StateGraph(AgentState)
 
 # ノード登録（Phase 1〜2の既存関数をそのまま使う）
-graph.add_node("fetch_garmin", fetch_garmin)
+graph.add_node("fetch_workouts", fetch_workouts)
 graph.add_node("fetch_calendar", fetch_calendar)
 graph.add_node("fetch_weather", fetch_weather)
 graph.add_node("apply_guardrails", apply_guardrails)
@@ -62,8 +62,8 @@ graph.add_node("self_check", self_check)
 graph.add_node("output_plan", output_plan)
 
 # エッジ
-graph.set_entry_point("fetch_garmin")
-graph.add_edge("fetch_garmin", "fetch_calendar")
+graph.set_entry_point("fetch_workouts")
+graph.add_edge("fetch_workouts", "fetch_calendar")
 graph.add_edge("fetch_calendar", "fetch_weather")
 graph.add_edge("fetch_weather", "apply_guardrails")
 graph.add_edge("apply_guardrails", "generate_plan")

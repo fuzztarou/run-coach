@@ -55,7 +55,7 @@ Google Calendar APIの `extendedProperties.private` を使用:
 ## 実装
 
 - [x] `run_coach/calendar.py` — `sync_plan_to_calendar()` ノード追加
-- [x] `run_coach/graph.py` — `output_plan → sync_calendar → END`
+- [x] `run_coach/graph.py` — `output_plan → sync_calendar → notify_line → END`
 - [x] `tests/test_calendar_sync.py` — ユニットテスト
 
 ## テスト方針
