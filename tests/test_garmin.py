@@ -1,4 +1,8 @@
-from run_coach.garmin import parse_splits, summarize_activity
+from unittest.mock import MagicMock, patch
+
+from garminconnect import GarminConnectTooManyRequestsError  # type: ignore[import-untyped]
+
+from run_coach.garmin import LOGIN_MAX_RETRIES, parse_splits, summarize_activity
 
 
 def _make_activity(**overrides) -> dict:
@@ -100,6 +104,61 @@ def test_parse_splits_empty():
     """空のレスポンスでも動くこと"""
     assert parse_splits({}) == []
     assert parse_splits({"lapDTOs": []}) == []
+
+
+def _reset_garmin_client():
+    """テスト前にキャッシュされたGarminクライアントをリセットする。"""
+    import run_coach.garmin as garmin_mod
+
+    garmin_mod._garmin_client = None
+
+
+@patch("run_coach.garmin.time.sleep")
+@patch("run_coach.garmin.Garmin")
+def test_login_retries_on_429_then_succeeds(mock_garmin_cls, mock_sleep, monkeypatch):
+    """429が返っても exponential backoff でリトライし、最終的にログイン成功すること"""
+    _reset_garmin_client()
+    monkeypatch.setenv("GARMIN_EMAIL", "test@example.com")
+    monkeypatch.setenv("GARMIN_PASSWORD", "pass")
+
+    mock_client = MagicMock()
+    mock_garmin_cls.return_value = mock_client
+    mock_client.login.side_effect = [
+        GarminConnectTooManyRequestsError("429"),
+        None,  # 2回目で成功
+    ]
+
+    from run_coach.garmin import _login
+
+    client = _login()
+
+    assert client is mock_client
+    assert mock_client.login.call_count == 2
+    mock_sleep.assert_called_once_with(10)  # LOGIN_INITIAL_BACKOFF_SECONDS * 2^0
+    _reset_garmin_client()
+
+
+@patch("run_coach.garmin.time.sleep")
+@patch("run_coach.garmin.Garmin")
+def test_login_raises_after_max_retries(mock_garmin_cls, mock_sleep, monkeypatch):
+    """最大リトライ回数を超えたら GarminConnectTooManyRequestsError が re-raise されること"""
+    _reset_garmin_client()
+    monkeypatch.setenv("GARMIN_EMAIL", "test@example.com")
+    monkeypatch.setenv("GARMIN_PASSWORD", "pass")
+
+    mock_client = MagicMock()
+    mock_garmin_cls.return_value = mock_client
+    mock_client.login.side_effect = GarminConnectTooManyRequestsError("429")
+
+    import pytest
+    from run_coach.garmin import _login
+
+    with pytest.raises(GarminConnectTooManyRequestsError):
+        _login()
+
+    assert mock_client.login.call_count == LOGIN_MAX_RETRIES + 1
+    assert mock_sleep.call_count == LOGIN_MAX_RETRIES
+    _reset_garmin_client()
 
 
 def test_parse_splits_missing_hr():

@@ -2,10 +2,15 @@ from __future__ import annotations
 
 import logging
 import os
+import time
 from datetime import date, timedelta
 from pathlib import Path
 
-from garminconnect import Garmin, GarminConnectAuthenticationError  # type: ignore[import-untyped]
+from garminconnect import (
+    Garmin,
+    GarminConnectAuthenticationError,
+    GarminConnectTooManyRequestsError,
+)  # type: ignore[import-untyped]
 
 from run_coach.cloud import is_cloud_run
 from run_coach.converters import pace_seconds_to_str
@@ -17,12 +22,18 @@ logger = logging.getLogger(__name__)
 GARMIN_TOKENSTORE_LOCAL = str(Path.home() / ".garminconnect")
 GARMIN_TOKENSTORE_CLOUD = "/tmp/.garminconnect"
 GCS_GARMIN_TOKEN_PREFIX = "garmin-tokens"
+
 # 一度に取得するアクティビティの最大件数
 ACTIVITY_FETCH_LIMIT = 10
 # ワークアウト履歴の取得対象期間（日数）
 LOOKBACK_DAYS = 14
 # 大会情報のスキャン対象期間（月数）
 RACE_SCAN_MONTHS = 12
+
+# ログイン429リトライ設定
+LOGIN_MAX_RETRIES = 3
+LOGIN_INITIAL_BACKOFF_SECONDS = 10
+
 # 取得対象のアクティビティタイプ
 TARGET_ACTIVITY_TYPES = (
     "running",
@@ -80,11 +91,28 @@ def _login() -> Garmin:
     email = os.environ.get("GARMIN_EMAIL", "")
     password = os.environ.get("GARMIN_PASSWORD", "")
     client = Garmin(email=email, password=password)
-    try:
-        client.login(tokenstore=tokenstore)
-    except (FileNotFoundError, GarminConnectAuthenticationError):
-        logger.info("トークンが無効または未保存のため、クレデンシャルでログインします")
-        client.login()
+
+    for attempt in range(LOGIN_MAX_RETRIES + 1):
+        try:
+            client.login(tokenstore=tokenstore)
+            break
+        except (FileNotFoundError, GarminConnectAuthenticationError):
+            logger.info(
+                "トークンが無効または未保存のため、クレデンシャルでログインします"
+            )
+            client.login()
+            break
+        except GarminConnectTooManyRequestsError:
+            if attempt == LOGIN_MAX_RETRIES:
+                raise
+            wait = LOGIN_INITIAL_BACKOFF_SECONDS * (2**attempt)
+            logger.warning(
+                "Garmin API レート制限 (429)。%d秒後にリトライします (%d/%d)",
+                wait,
+                attempt + 1,
+                LOGIN_MAX_RETRIES,
+            )
+            time.sleep(wait)
 
     # リフレッシュ済みトークンを含め毎回保存（次回セッションで再利用）
     client.garth.dump(tokenstore)
