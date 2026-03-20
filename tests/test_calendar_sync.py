@@ -23,6 +23,8 @@ from run_coach.state import (
     WorkoutPlan,
 )
 
+CALENDAR_ID_PATCH = patch("run_coach.calendar._get_calendar_id", return_value="primary")
+
 
 def _make_state(workouts: list[WorkoutPlan] | None = None) -> AgentState:
     """テスト用のAgentStateを生成する。"""
@@ -146,7 +148,8 @@ class TestBuildEventBody:
 
 
 class TestDeleteRunCoachEvents:
-    def test_deletes_matching_events(self) -> None:
+    @CALENDAR_ID_PATCH
+    def test_deletes_matching_events(self, _mock_cal_id: MagicMock) -> None:
         mock_service = MagicMock()
         mock_events = mock_service.events.return_value
         mock_events.list.return_value.execute.return_value = {
@@ -177,7 +180,8 @@ class TestDeleteRunCoachEvents:
         assert deleted == 0
         mock_events.delete.assert_not_called()
 
-    def test_uses_extended_property_filter(self) -> None:
+    @CALENDAR_ID_PATCH
+    def test_uses_extended_property_filter(self, _mock_cal_id: MagicMock) -> None:
         mock_service = MagicMock()
         mock_events = mock_service.events.return_value
         mock_events.list.return_value.execute.return_value = {"items": []}
@@ -237,12 +241,14 @@ class TestSyncPlanToCalendar:
 
         assert result.plan is not None
 
+    @CALENDAR_ID_PATCH
     @patch("run_coach.calendar._get_calendar_service")
     @patch("run_coach.calendar.CLIENT_SECRET_PATH")
     def test_deletes_before_insert(
         self,
         mock_path: MagicMock,
         mock_get_service: MagicMock,
+        _mock_cal_id: MagicMock,
         sample_workouts: list[WorkoutPlan],
     ) -> None:
         mock_path.exists.return_value = True
