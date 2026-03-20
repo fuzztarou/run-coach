@@ -134,7 +134,7 @@ def test_login_retries_on_429_then_succeeds(mock_garmin_cls, mock_sleep, monkeyp
 
     assert client is mock_client
     assert mock_client.login.call_count == 2
-    mock_sleep.assert_called_once_with(10)  # LOGIN_INITIAL_BACKOFF_SECONDS * 2^0
+    mock_sleep.assert_called_once_with(30)  # LOGIN_INITIAL_BACKOFF_SECONDS * 2^0
     _reset_garmin_client()
 
 
