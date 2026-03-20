@@ -5,6 +5,7 @@ import os
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
+from google.auth.exceptions import RefreshError  # type: ignore[import-untyped]
 from google.auth.transport.requests import Request  # type: ignore[import-untyped]
 from google.oauth2.credentials import Credentials  # type: ignore[import-untyped]
 from google_auth_oauthlib.flow import InstalledAppFlow  # type: ignore[import-untyped]
@@ -35,19 +36,23 @@ def _get_calendar_service() -> Resource:
         creds, _ = google.auth.default(scopes=SCOPES)
         return build("calendar", "v3", credentials=creds)
 
-    creds = None
+    creds = None  # type: ignore[assignment]
     if TOKEN_PATH.exists():
         creds = Credentials.from_authorized_user_file(str(TOKEN_PATH), SCOPES)
 
     if not creds or not creds.valid:
-        if creds and creds.expired and creds.refresh_token:
-            creds.refresh(Request())
-        else:
+        if creds and creds.expired and getattr(creds, "refresh_token", None):
+            try:
+                creds.refresh(Request())
+            except RefreshError:
+                logger.warning("リフレッシュトークンが失効しました。再認証を試みます")
+                creds = None  # type: ignore[assignment]  # re-widen to trigger re-auth
+        if not creds:
             flow = InstalledAppFlow.from_client_secrets_file(
                 str(CLIENT_SECRET_PATH), SCOPES
             )
-            creds = flow.run_local_server(port=0)
-        TOKEN_PATH.write_text(creds.to_json())
+            creds = flow.run_local_server(port=0)  # type: ignore[assignment]
+        TOKEN_PATH.write_text(creds.to_json())  # type: ignore[union-attr]
 
     return build("calendar", "v3", credentials=creds)
 
@@ -116,7 +121,7 @@ def fetch_calendar(state: AgentState) -> AgentState:
         service = _get_calendar_service()
         events_by_date = _fetch_events(service)
         state.constraints.available_slots = _build_slots(events_by_date)
-    except (HttpError, OSError, ValueError):
+    except (HttpError, OSError, ValueError, RefreshError):
         logger.warning("カレンダーの取得に失敗しました", exc_info=True)
 
     print(f"  {len(state.constraints.available_slots)} 日分のスロットを取得しました")
@@ -235,7 +240,7 @@ def sync_plan_to_calendar(state: AgentState) -> AgentState:
             _create_workout_event(service, workout)
 
         print(f"  {len(workouts_to_sync)} 件のワークアウトをカレンダーに登録しました")
-    except (HttpError, OSError, ValueError):
+    except (HttpError, OSError, ValueError, RefreshError):
         logger.warning("カレンダーへの同期に失敗しました", exc_info=True)
 
     return state

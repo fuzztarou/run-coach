@@ -5,11 +5,14 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from google.auth.exceptions import RefreshError
+
 from run_coach.calendar import (
     EXTENDED_PROPERTY_KEY,
     EXTENDED_PROPERTY_VALUE,
     _build_event_body,
     _delete_run_coach_events,
+    fetch_calendar,
     sync_plan_to_calendar,
 )
 from run_coach.state import (
@@ -273,3 +276,72 @@ class TestSyncPlanToCalendar:
 
         mock_get_service.assert_not_called()
         assert result.plan is not None
+
+
+@patch(
+    "run_coach.calendar._get_calendar_service",
+    side_effect=RefreshError("token revoked"),
+)
+@patch("run_coach.calendar.CLIENT_SECRET_PATH")
+def test_fetch_calendar_skips_on_refresh_error(
+    mock_path: MagicMock, mock_get_service: MagicMock
+) -> None:
+    """RefreshError発生時にfetch_calendarがクラッシュせずstateを返すこと。"""
+    mock_path.exists.return_value = True
+    state = _make_state()
+    result = fetch_calendar(state)
+
+    assert result.constraints.available_slots == []
+
+
+@patch(
+    "run_coach.calendar._get_calendar_service",
+    side_effect=RefreshError("token revoked"),
+)
+@patch("run_coach.calendar.CLIENT_SECRET_PATH")
+def test_sync_skips_on_refresh_error(
+    mock_path: MagicMock,
+    mock_get_service: MagicMock,
+    sample_workouts: list[WorkoutPlan],
+) -> None:
+    """RefreshError発生時にsync_plan_to_calendarがクラッシュせずstateを返すこと。"""
+    mock_path.exists.return_value = True
+    state = _make_state(sample_workouts)
+    result = sync_plan_to_calendar(state)
+
+    assert result.plan is not None
+
+
+@patch("run_coach.calendar.build")
+@patch("run_coach.calendar.InstalledAppFlow")
+@patch("run_coach.calendar.TOKEN_PATH")
+@patch("run_coach.calendar.is_cloud_run", return_value=False)
+def test_get_calendar_service_refresh_error_retries_auth(
+    mock_is_cloud: MagicMock,
+    mock_token_path: MagicMock,
+    mock_flow_cls: MagicMock,
+    mock_build: MagicMock,
+) -> None:
+    """creds.refresh()でRefreshError時にInstalledAppFlowで再認証すること。"""
+    mock_creds = MagicMock()
+    mock_creds.valid = False
+    mock_creds.expired = True
+    mock_creds.refresh_token = "old_token"
+    mock_creds.refresh.side_effect = RefreshError("token revoked")
+    mock_token_path.exists.return_value = True
+
+    mock_new_creds = MagicMock()
+    mock_flow = MagicMock()
+    mock_flow.run_local_server.return_value = mock_new_creds
+    mock_flow_cls.from_client_secrets_file.return_value = mock_flow
+
+    with patch(
+        "run_coach.calendar.Credentials.from_authorized_user_file",
+        return_value=mock_creds,
+    ):
+        from run_coach.calendar import _get_calendar_service
+
+        _get_calendar_service()
+
+    mock_flow.run_local_server.assert_called_once()
+    mock_build.assert_called_once_with("calendar", "v3", credentials=mock_new_creds)
