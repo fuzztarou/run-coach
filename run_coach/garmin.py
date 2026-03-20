@@ -92,6 +92,13 @@ def _login() -> Garmin:
     password = os.environ.get("GARMIN_PASSWORD", "")
     client = Garmin(email=email, password=password)
 
+    # garthの内蔵urllib3リトライから429を除外し、上位のbackoffに任せる
+    # デフォルト: (408, 429, 500, 502, 503, 504) → 429を除去
+    garth_default = client.garth.status_forcelist
+    client.garth.configure(
+        status_forcelist=tuple(s for s in garth_default if s != 429),
+    )
+
     for attempt in range(LOGIN_MAX_RETRIES + 1):
         try:
             try:
