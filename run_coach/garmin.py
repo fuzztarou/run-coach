@@ -32,7 +32,7 @@ RACE_SCAN_MONTHS = 12
 
 # ログイン429リトライ設定
 LOGIN_MAX_RETRIES = 3
-LOGIN_INITIAL_BACKOFF_SECONDS = 10
+LOGIN_INITIAL_BACKOFF_SECONDS = 30
 
 # 取得対象のアクティビティタイプ
 TARGET_ACTIVITY_TYPES = (
@@ -94,13 +94,13 @@ def _login() -> Garmin:
 
     for attempt in range(LOGIN_MAX_RETRIES + 1):
         try:
-            client.login(tokenstore=tokenstore)
-            break
-        except (FileNotFoundError, GarminConnectAuthenticationError):
-            logger.info(
-                "トークンが無効または未保存のため、クレデンシャルでログインします"
-            )
-            client.login()
+            try:
+                client.login(tokenstore=tokenstore)
+            except (FileNotFoundError, GarminConnectAuthenticationError):
+                logger.info(
+                    "トークンが無効または未保存のため、クレデンシャルでログインします"
+                )
+                client.login()
             break
         except GarminConnectTooManyRequestsError:
             if attempt == LOGIN_MAX_RETRIES:
