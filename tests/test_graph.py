@@ -126,6 +126,7 @@ def test_graph_full_flow(monkeypatch):
     monkeypatch.setattr("run_coach.graph.fetch_weather", noop)
     monkeypatch.setattr("run_coach.planner.generate_plan", mock_generate_plan)
     monkeypatch.setattr("run_coach.graph.self_check", mock_self_check)
+    monkeypatch.setattr("run_coach.graph.sync_plan_to_calendar", noop)
     monkeypatch.setattr("run_coach.graph.output_plan", noop)
     monkeypatch.setattr("run_coach.graph.notify_line", noop)
 
@@ -168,6 +169,7 @@ def test_graph_retry_flow(monkeypatch):
     monkeypatch.setattr("run_coach.graph.fetch_weather", noop)
     monkeypatch.setattr("run_coach.planner.generate_plan", mock_generate_plan)
     monkeypatch.setattr("run_coach.graph.self_check", mock_self_check)
+    monkeypatch.setattr("run_coach.graph.sync_plan_to_calendar", noop)
     monkeypatch.setattr("run_coach.graph.output_plan", noop)
     monkeypatch.setattr("run_coach.graph.notify_line", noop)
 
