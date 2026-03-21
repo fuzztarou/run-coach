@@ -1,0 +1,11 @@
+You are about to commit code. Review the staged diff below from these perspectives (different from your implementation mindset). Be brief — only flag real issues.
+
+1. **Security**: Hardcoded secrets, SQL injection, input validation gaps, sensitive data exposure to LLM
+2. **CLAUDE.md violations**: snake_case, magic numbers, test style (flat functions, monkeypatch, TestClient)
+3. **Over-engineering**: YAGNI violations, unnecessary abstractions, dead error handling
+4. **Edge cases**: Boundary values, None/empty list handling, network error behavior
+5. **Consistency**: Naming, error handling patterns, log format matching existing code
+6. **Dependencies**: Breaking changes to interfaces, impact on other modules
+
+If no issues found, say "Review: OK" and proceed with the commit.
+If issues found, list each as: **[Category]** file:line — description (keep it to one line per issue). Then fix the issues before committing.
