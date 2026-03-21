@@ -1,7 +1,7 @@
 .PHONY: help up down build logs ps restart \
        db-up db-down db-logs db-psql \
        migrate migrate-history migrate-new migrate-down \
-       local-coach cloud-coach upload-profile \
+       local-coach cloud-coach upload-profile upload-garmin-tokens \
        gcp-set-project \
        scheduler-create scheduler-delete scheduler-run scheduler-describe \
        check-activity-run \
@@ -80,6 +80,9 @@ gcp-set-project: ## GCPプロジェクトを切り替え（要: RUN_COACH_GCP_PR
 	@echo "プロジェクトを $(RUN_COACH_GCP_PROJECT_ID) に切り替えました"
 
 # ── GCS ─────────────────────────────────────────────
+
+upload-garmin-tokens: ## Garminトークンをリフレッシュし GCS にアップロード（要: GARMIN_EMAIL, GARMIN_PASSWORD, RUN_COACH_GCS_BUCKET）
+	uv run python -m scripts.upload_garmin_tokens
 
 upload-profile: ## profile.yaml を GCS にアップロード（要: RUN_COACH_GCS_BUCKET 環境変数）
 	@test -n "$(RUN_COACH_GCS_BUCKET)" || (echo "Error: RUN_COACH_GCS_BUCKET 環境変数が未設定です" && exit 1)
