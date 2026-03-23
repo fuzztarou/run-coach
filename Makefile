@@ -2,6 +2,7 @@
        db-up db-down db-logs db-psql \
        migrate migrate-history migrate-new migrate-down \
        local-coach cloud-coach upload-profile upload-garmin-tokens \
+       garmin-cron-install garmin-cron-uninstall \
        gcp-set-project \
        scheduler-create scheduler-delete scheduler-run scheduler-describe \
        check-activity-run \
@@ -83,6 +84,17 @@ gcp-set-project: ## GCPプロジェクトを切り替え（要: RUN_COACH_GCP_PR
 
 upload-garmin-tokens: ## Garminトークンをリフレッシュし GCS にアップロード（要: GARMIN_EMAIL, GARMIN_PASSWORD, RUN_COACH_GCS_BUCKET）
 	uv run python -m scripts.upload_garmin_tokens
+
+GARMIN_CRON_PLIST := $(HOME)/Library/LaunchAgents/com.run-coach.upload-garmin-tokens.plist
+
+garmin-cron-install: ## Garminトークン定期リフレッシュを登録（毎日10:00）
+	launchctl bootout gui/$$(id -u) $(GARMIN_CRON_PLIST) 2>/dev/null || true
+	launchctl bootstrap gui/$$(id -u) $(GARMIN_CRON_PLIST)
+	@echo "登録完了: 毎日 10:00 に Garmin トークンをリフレッシュします"
+
+garmin-cron-uninstall: ## Garminトークン定期リフレッシュを解除
+	launchctl bootout gui/$$(id -u) $(GARMIN_CRON_PLIST)
+	@echo "解除完了"
 
 upload-profile: ## profile.yaml を GCS にアップロード（要: RUN_COACH_GCS_BUCKET 環境変数）
 	@test -n "$(RUN_COACH_GCS_BUCKET)" || (echo "Error: RUN_COACH_GCS_BUCKET 環境変数が未設定です" && exit 1)
